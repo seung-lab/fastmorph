@@ -54,12 +54,23 @@ def spherical_close(
   args = [ radius, parallel, anisotropy ]
   return spherical_erode(spherical_dilate(labels, *args), *args)
 
+
+class FillError(Exception):
+  pass
+
 def fill_holes(
   labels:np.ndarray, 
-  return_fill_count:bool = False
+  return_fill_count:bool = False,
+  remove_enclosed:bool = False,
+  return_removed:bool = False,
 ) -> np.ndarray:
   """
   For fill holes in toplogically closed objects.
+
+  return_fill_count: return the total number of pixels filled in
+  remove_enclosed: if one label totally encloses another, the interior label
+    will be removed. Otherwise, raise a FillError.
+  return_removed: 
   """
   assert np.issubdtype(labels.dtype, np.integer) or np.issubdtype(labels.dtype, bool), "fill_holes is currently only supported for integer or binary images."
   if np.issubdtype(labels.dtype, bool):
@@ -70,14 +81,48 @@ def fill_holes(
   mapping = fastremap.component_map(cc_labels, labels)
 
   fill_counts = {}
-  output = np.zeros(labels.shape, dtype=labels.dtype)
-  slices = stats["bounding_boxes"]
-  for label in range(1, N+1):
-    binimg, ct = fill_voids.fill(cc_labels[slices[label]] == label, return_fill_count=True)
-    output[slices[label]] = mapping[label] * binimg
-    fill_counts[mapping[label]] = ct
+  all_slices = stats["bounding_boxes"]
+
+  labels = list(range(1, N+1))
+  labels_set = set(labels)
+  removed_set = set()
+
+  for label in labels:
+    if label not in labels_set:
+      continue
+
+    slices = all_slices[label]
+    if slices is None:
+      continue
+
+    binary_image = (cc_labels[slices] == label)
+    binary_image, pixels_filled = fill_voids.fill(
+      binary_image, in_place=True, 
+      return_fill_count=True
+    )
+    fill_counts[label] = pixels_filled
+    if pixels_filled == 0:
+      continue
+
+    sub_labels = set(fastremap.unique(cc_labels[slices] * binary_image))
+    sub_labels.remove(label)
+    sub_labels.discard(0)
+    if not remove_enclosed and sub_labels:
+      raise FillError(f"{sub_labels} would have been deleted by this operation.")
+    
+    labels_set -= sub_labels
+    removed_set |= sub_labels
+    cc_labels[slices] = cc_labels[slices] * ~binary_image + mapping[label] * binary_image
+
+  ret = [ cc_labels ]
 
   if return_fill_count:
-    return (output, fill_counts)
+    for label in removed_set:
+      del fill_counts[label]
+    ret.append(fill_counts)
 
-  return output
+  if return_removed:
+    ret.append(removed_set)
+
+  return tuple(ret)
+
