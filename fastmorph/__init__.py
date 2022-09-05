@@ -61,7 +61,7 @@ def fill_holes(
   """
   For fill holes in toplogically closed objects.
   """
-  assert np.issubdtype(labels.dtype, (np.integer, bool)), "fill_holes is currently only supported for integer or binary images."
+  assert np.issubdtype(labels.dtype, np.integer) or np.issubdtype(labels.dtype, bool), "fill_holes is currently only supported for integer or binary images."
   if np.issubdtype(labels.dtype, bool):
     return fill_voids.fill(labels, return_fill_count=return_fill_count)
 
