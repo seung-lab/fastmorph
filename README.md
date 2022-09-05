@@ -12,9 +12,12 @@ labels = np.load("my_labels.npy")
 # same as voxels.
 morphed = fastmorph.spherical_dilate(labels, radius=1, parallel=2, anisotropy=(1,1,1))
 
-# The rest support multilabel images.
-morphed = fastmorph.spherical_erode(labels, radius=1, parallel=2, anisotropy=(1,1,1))
+# open and close require dialate to work and so are binary only for now
 morphed = fastmorph.spherical_open(labels, radius=1, parallel=2, anisotropy=(1,1,1))
 morphed = fastmorph.spherical_close(labels, radius=1, parallel=2, anisotropy=(1,1,1))
+
+# The rest support multilabel images.
+morphed = fastmorph.spherical_erode(labels, radius=1, parallel=2, anisotropy=(1,1,1))
 filled_labels, ct = fastmorph.fill_holes(labels, return_fill_count=True)
 ```
+
