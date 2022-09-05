@@ -68,9 +68,14 @@ def fill_holes(
   For fill holes in toplogically closed objects.
 
   return_fill_count: return the total number of pixels filled in
+    for boolean array: integer
+    for integer array: { label: count }
   remove_enclosed: if one label totally encloses another, the interior label
     will be removed. Otherwise, raise a FillError.
-  return_removed: 
+  return_removed: returns the set of totally enclosed 
+    labels that were eliminated
+
+  Return value: (filled_labels, fill_count (if specified), removed_set (if specified))
   """
   assert np.issubdtype(labels.dtype, np.integer) or np.issubdtype(labels.dtype, bool), "fill_holes is currently only supported for integer or binary images."
   if np.issubdtype(labels.dtype, bool):
