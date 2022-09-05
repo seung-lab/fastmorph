@@ -1,4 +1,7 @@
+![Automated Tests](https://github.com/seung-lab/fastmorph/actions/workflows/run_tests.yml/badge.svg)
+
 # fastmorph: multilabel 3D morphological image processing functions.
+
 
 ```python
 import fastmorph
