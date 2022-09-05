@@ -10,7 +10,7 @@ setuptools.setup(
   name="fastmorph",
   version="0.1.0",
   install_requires=['numpy', 'edt', 'fill-voids', 'connected-components-3d', 'fastremap'],
-  python_requires=">=3.7.0", # >= 3.7 < 4.0
+  python_requires=">=3.8.0", # >= 3.8 < 4.0
   author="William Silversmith",
   author_email="ws9@princeton.edu",
   packages=setuptools.find_packages(),
