@@ -44,4 +44,16 @@ def test_fill_holes():
 	assert ct[1] == 1
 	assert ct[2] == 1
 
+def test_spherical_open_close_run():
+	labels = np.zeros((10,10,10), dtype=bool)
+	res = fastmorph.spherical_open(labels, radius=1)
+	res = fastmorph.spherical_close(labels, radius=1)
+
+def test_spherical_close():
+	labels = np.zeros((10,10,10), dtype=bool)
+	labels[4:7,4:7,4:7] = True
+	labels[5,5,5] = False
+
+	res = fastmorph.spherical_close(labels, radius=1)
+	assert res[5,5,5] == True
 
