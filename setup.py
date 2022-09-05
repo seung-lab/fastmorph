@@ -9,6 +9,7 @@ def read(fname):
 setuptools.setup(
   name="fastmorph",
   version="0.1.0",
+  setup_requires=["numpy"],
   install_requires=['numpy', 'edt', 'fill-voids', 'connected-components-3d', 'fastremap'],
   python_requires=">=3.8.0", # >= 3.8 < 4.0
   author="William Silversmith",
