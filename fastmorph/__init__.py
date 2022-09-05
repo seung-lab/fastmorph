@@ -31,11 +31,12 @@ def spherical_dilate(
   assert np.issubdtype(labels.dtype, bool), "Dilation is currently only supported for binary images."
   dt = edt.edt(labels == 0, parallel=parallel, anisotropy=anisotropy)
   
+  binary_image = lambda: dt <= radius
   if in_place:
-    labels |= (dt <= radius)
+    labels |= binary_image()
     return labels
 
-  return labels | (dt <= radius)
+  return labels | binary_image()
 
 def spherical_erode(
   labels:np.ndarray, 
@@ -60,11 +61,11 @@ def spherical_erode(
   """
   dt = edt.edt(labels, parallel=parallel, anisotropy=anisotropy, black_border=True)
 
-  binary_image = dt >= radius
+  binary_image = lambda: dt >= radius
   if in_place:
-    labels *= binary_image
+    labels *= binary_image()
     return labels
-  return (labels * binary_image).astype(labels.dtype, copy=False)
+  return (labels * binary_image()).astype(labels.dtype, copy=False)
 
 def spherical_open(
   labels:np.ndarray, 
