@@ -116,7 +116,13 @@ def fill_holes(
   """
   assert np.issubdtype(labels.dtype, np.integer) or np.issubdtype(labels.dtype, bool), "fill_holes is currently only supported for integer or binary images."
   if np.issubdtype(labels.dtype, bool):
-    return fill_voids.fill(labels, return_fill_count=return_fill_count)
+    filled_labels, filled_ct = fill_voids.fill(labels, return_fill_count=True)
+    ret = [ filled_labels ]
+    if return_fill_count:
+      ret.append(filled_ct)
+    if return_removed:
+      ret.append(set())
+    return (ret[0] if len(ret) == 1 else tuple(ret))
 
   cc_labels, N = cc3d.connected_components(labels, return_N=True)
   stats = cc3d.statistics(cc_labels)
@@ -166,5 +172,5 @@ def fill_holes(
   if return_removed:
     ret.append(removed_set)
 
-  return tuple(ret)
+  return (ret[0] if len(ret) == 1 else tuple(ret))
 

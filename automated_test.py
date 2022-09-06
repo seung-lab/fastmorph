@@ -44,6 +44,25 @@ def test_fill_holes():
 	assert ct[1] == 1
 	assert ct[2] == 1
 
+	labels = np.ones((10,10,10), dtype=bool)
+	labels[5,5,2] = 0
+
+	res = fastmorph.fill_holes(labels, return_fill_count=False)
+	assert np.all(res == True)
+
+	res = fastmorph.fill_holes(labels, return_fill_count=True)
+	assert np.all(res[0] == True)
+	assert res[1] == 1
+
+	res = fastmorph.fill_holes(labels, return_removed=True)
+	assert np.all(res[0] == True)
+	assert res[1] == set()
+
+	res = fastmorph.fill_holes(labels, return_fill_count=True, return_removed=True)
+	assert np.all(res[0] == True)
+	assert res[1] == 1
+	assert res[2] == set()
+
 def test_spherical_open_close_run():
 	labels = np.zeros((10,10,10), dtype=bool)
 	res = fastmorph.spherical_open(labels, radius=1)
