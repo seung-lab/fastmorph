@@ -19,7 +19,9 @@ def dilate(
   labels = np.asfortranarray(labels)
   while labels.ndim < 3:
     labels = labels[..., np.newaxis]
-  return fastmorphops.dilate(labels)
+  output = fastmorphops.dilate(labels)
+  return output.view(labels.dtype)
+
 
 def spherical_dilate(
   labels:np.ndarray, 
