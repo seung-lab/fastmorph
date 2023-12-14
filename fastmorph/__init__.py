@@ -5,7 +5,21 @@ import fill_voids
 import cc3d
 import fastremap
 
+import fastmorphops
+
 AnisotropyType = Optional[Sequence[int]]
+
+def dilate(
+  labels:np.ndarray
+) -> np.ndarray:
+  """
+  Dilate forground labels using a 3x3x3 stencil with
+  all elements "on".
+  """
+  labels = np.asfortranarray(labels)
+  while labels.ndim < 3:
+    labels = labels[..., np.newaxis]
+  return fastmorphops.dilate(labels)
 
 def spherical_dilate(
   labels:np.ndarray, 
