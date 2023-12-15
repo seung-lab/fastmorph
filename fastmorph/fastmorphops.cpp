@@ -213,12 +213,15 @@ py::array erode_helper(
 	// right is leading edge, middle becomes left, 
 	// left gets deleted
 	std::vector<LABEL> left, middle, right;
+	bool pure_left = false;
+	bool pure_middle = false;
+	bool pure_right = false;
 
 	auto fill_partial_stencil_fn = [&](
 		const uint64_t xi, const uint64_t yi, const uint64_t zi, 
-		std::vector<LABEL> &ring
+		std::vector<LABEL> &square
 	) {
-		ring.clear();
+		square.clear();
 
 		if (xi < 0 || xi >= sx) {
 			return;
@@ -227,39 +230,56 @@ py::array erode_helper(
 		const uint64_t loc = xi + sx * (yi + sy * zi);
 
 		if (labels[loc] != 0) {
-			ring.push_back(labels[loc]);
+			square.push_back(labels[loc]);
 		}
 
 		if (yi > 0 && labels[loc-sx] != 0) {
-			ring.push_back(labels[loc-sx]);
+			square.push_back(labels[loc-sx]);
 		}
 		if (yi < sy - 1 && labels[loc+sx] != 0) {
-			ring.push_back(labels[loc+sx]);
+			square.push_back(labels[loc+sx]);
 		}
 		if (zi > 0 && labels[loc-sxy] != 0) {
-			ring.push_back(labels[loc-sxy]);
+			square.push_back(labels[loc-sxy]);
 		}
 		if (zi < sz - 1 && labels[loc+sxy] != 0) {
-			ring.push_back(labels[loc+sxy]);
+			square.push_back(labels[loc+sxy]);
 		}
 		if (yi > 0 && zi > 0 && labels[loc-sx-sxy] != 0) {
-			ring.push_back(labels[loc-sx-sxy]);
+			square.push_back(labels[loc-sx-sxy]);
 		}
 		if (yi < sy -1 && zi > 0 && labels[loc+sx-sxy] != 0) {
-			ring.push_back(labels[loc+sx-sxy]);
+			square.push_back(labels[loc+sx-sxy]);
 		}
 		if (yi > 0 && zi < sz - 1 && labels[loc-sx+sxy] != 0) {
-			ring.push_back(labels[loc-sx+sxy]);
+			square.push_back(labels[loc-sx+sxy]);
 		}
 		if (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] != 0) {
-			ring.push_back(labels[loc+sx+sxy]);
+			square.push_back(labels[loc+sx+sxy]);
 		}
+	};
+
+	auto is_pure = [](std::vector<LABEL> &square){
+		if (square.size() < 9) {
+			return false;
+		}
+
+		for (int i = 1; i < 9; i++) {
+			if (square[i] != square[i-1]) {
+				return false;
+			}
+		}
+
+		return true;
 	};
 
 	auto advance_stencil = [&](uint64_t x, uint64_t y, uint64_t z) {
 		left = middle;
 		middle = right;
+		pure_left = pure_middle;
+		pure_middle = pure_right;
 		fill_partial_stencil_fn(x+2,y,z,right);
+		pure_right = is_pure(right);
 	};
 
 	bool stale_stencil = true;
@@ -279,33 +299,13 @@ py::array erode_helper(
 					fill_partial_stencil_fn(x-1,y,z,left);
 					fill_partial_stencil_fn(x,y,z,middle);
 					fill_partial_stencil_fn(x+1,y,z,right);
+					pure_left = is_pure(left);
+					pure_middle = is_pure(middle);
+					pure_right = is_pure(right);
 					stale_stencil = false;
 				}
 
-				if (left.size() + middle.size() + right.size() < 27) {
-					advance_stencil(x,y,z);
-					continue;					
-				} 
-
-				std::vector<LABEL> neighbors;
-				neighbors.reserve(27);
-
-				// this could be optimized by scanning only right to determine 
-				// if it's pure if we remember left and middle
-				neighbors.insert(neighbors.end(), left.begin(), left.end());
-				neighbors.insert(neighbors.end(), middle.begin(), middle.end());
-				neighbors.insert(neighbors.end(), right.begin(), right.end());
-
-				int size = neighbors.size();
-				bool pure = true;
-				for (int i = 1; i < size; i++) {
-					if (neighbors[i] != neighbors[i-1]) {
-						pure = false;
-						break;
-					}
-				}
-
-				if (pure) {
+				if (pure_left && pure_middle && pure_right) {
 					output[loc] = labels[loc];
 				}
 
