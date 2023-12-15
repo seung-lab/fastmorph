@@ -32,6 +32,37 @@ def dilate(
   output = fastmorphops.dilate(labels, background_only)
   return output.view(labels.dtype)
 
+def erode(labels:np.ndarray) -> np.ndarray:
+  """
+  Erodes forground labels using a 3x3x3 stencil with
+  all elements "on".
+
+  labels: a 3D numpy array containing integer labels
+    representing shapes to be dilated.
+  """
+  labels = np.asfortranarray(labels)
+  while labels.ndim < 3:
+    labels = labels[..., np.newaxis]
+  output = fastmorphops.erode(labels)
+  return output.view(labels.dtype)
+
+def opening(labels:np.ndarray, background_only:bool = True) -> np.ndarray:
+  """Performs morphological opening of labels.
+
+  background_only is passed through to dilate.
+    True: Only evaluate background voxels for dilation.
+    False: Allow labels to erode each other as they grow.
+  """
+  return dilate(erode(labels), background_only)
+
+def closing(labels:np.ndarray, background_only:bool = True) -> np.ndarray:
+  """Performs morphological closing of labels.
+
+  background_only is passed through to dilate.
+    True: Only evaluate background voxels for dilation.
+    False: Allow labels to erode each other as they grow.
+  """
+  return erode(dilate(labels, background_only))
 
 def spherical_dilate(
   labels:np.ndarray, 
