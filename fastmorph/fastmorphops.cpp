@@ -134,9 +134,10 @@ py::array dilate_helper(
 		}
 	}
 
-
 	py::capsule capsule(output, [](void* ptr) {
-		delete[] ptr;
+	    if (ptr) {
+	        delete[] static_cast<LABEL*>(ptr);
+	    }
 	});
 
 	uint64_t width = sizeof(LABEL);
