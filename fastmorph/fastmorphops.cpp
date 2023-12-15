@@ -48,9 +48,9 @@ py::array dilate_helper(
 
 	auto fill_partial_stencil_fn = [&](
 		const uint64_t xi, const uint64_t yi, const uint64_t zi, 
-		std::vector<LABEL> &ring
+		std::vector<LABEL> &square
 	) {
-		ring.clear();
+		square.clear();
 
 		if (xi < 0 || xi >= sx) {
 			return;
@@ -59,32 +59,32 @@ py::array dilate_helper(
 		const uint64_t loc = xi + sx * (yi + sy * zi);
 
 		if (labels[loc] != 0) {
-			ring.push_back(labels[loc]);
+			square.push_back(labels[loc]);
 		}
 
 		if (yi > 0 && labels[loc-sx] != 0) {
-			ring.push_back(labels[loc-sx]);
+			square.push_back(labels[loc-sx]);
 		}
 		if (yi < sy - 1 && labels[loc+sx] != 0) {
-			ring.push_back(labels[loc+sx]);
+			square.push_back(labels[loc+sx]);
 		}
 		if (zi > 0 && labels[loc-sxy] != 0) {
-			ring.push_back(labels[loc-sxy]);
+			square.push_back(labels[loc-sxy]);
 		}
 		if (zi < sz - 1 && labels[loc+sxy] != 0) {
-			ring.push_back(labels[loc+sxy]);
+			square.push_back(labels[loc+sxy]);
 		}
 		if (yi > 0 && zi > 0 && labels[loc-sx-sxy] != 0) {
-			ring.push_back(labels[loc-sx-sxy]);
+			square.push_back(labels[loc-sx-sxy]);
 		}
 		if (yi < sy -1 && zi > 0 && labels[loc+sx-sxy] != 0) {
-			ring.push_back(labels[loc+sx-sxy]);
+			square.push_back(labels[loc+sx-sxy]);
 		}
 		if (yi > 0 && zi < sz - 1 && labels[loc-sx+sxy] != 0) {
-			ring.push_back(labels[loc-sx+sxy]);
+			square.push_back(labels[loc-sx+sxy]);
 		}
 		if (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] != 0) {
-			ring.push_back(labels[loc+sx+sxy]);
+			square.push_back(labels[loc+sx+sxy]);
 		}
 	};
 
