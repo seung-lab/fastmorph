@@ -12,7 +12,8 @@ namespace py = pybind11;
 template <typename LABEL>
 py::array dilate_helper(
 	LABEL* labels, LABEL* output,
-	const uint64_t sx, const uint64_t sy, const uint64_t sz
+	const uint64_t sx, const uint64_t sy, const uint64_t sz,
+	const bool background_only
 ) {
 
 	// assume a 3x3x3 stencil with all voxels on
@@ -79,7 +80,7 @@ py::array dilate_helper(
 			for (uint64_t x = 0; x < sx; x++) {
 				uint64_t loc = x + sx * (y + sy * z);
 
-				if (labels[loc] != 0) {
+				if (background_only && labels[loc] != 0) {
 					output[loc] = labels[loc];
 					stale_stencil = true;
 					continue;
@@ -152,7 +153,7 @@ py::array dilate_helper(
 
 
 // assumes fortran order
-py::array dilate(const py::array &labels) {
+py::array dilate(const py::array &labels, const bool background_only) {
 	int width = labels.dtype().itemsize();
 
 	const uint64_t sx = labels.shape()[0];
@@ -168,28 +169,32 @@ py::array dilate(const py::array &labels) {
 		output = dilate_helper(
 			reinterpret_cast<uint8_t*>(labels_ptr),
 			reinterpret_cast<uint8_t*>(output_ptr),
-			sx, sy, sz
+			sx, sy, sz,
+			background_only
 		);
 	}
 	else if (width == 2) {
 		output = dilate_helper(
 			reinterpret_cast<uint16_t*>(labels_ptr),
 			reinterpret_cast<uint16_t*>(output_ptr),
-			sx, sy, sz
+			sx, sy, sz,
+			background_only
 		);
 	}
 	else if (width == 4) {
 		output = dilate_helper(
 			reinterpret_cast<uint32_t*>(labels_ptr),
 			reinterpret_cast<uint32_t*>(output_ptr),
-			sx, sy, sz
+			sx, sy, sz,
+			background_only
 		);
 	}
 	else if (width == 8) {
 		output = dilate_helper(
 			reinterpret_cast<uint64_t*>(labels_ptr),
 			reinterpret_cast<uint64_t*>(output_ptr),
-			sx, sy, sz
+			sx, sy, sz,
+			background_only
 		);
 	}
 
