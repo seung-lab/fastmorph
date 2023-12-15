@@ -9,6 +9,28 @@
 
 namespace py = pybind11;
 
+
+template <typename LABEL>
+py::array to_numpy(
+	LABEL* output,
+	const uint64_t sx, const uint64_t sy, const uint64_t sz
+) {
+	py::capsule capsule(output, [](void* ptr) {
+		if (ptr) {
+			delete[] static_cast<LABEL*>(ptr);
+		}
+	});
+
+	uint64_t width = sizeof(LABEL);
+
+	return py::array_t<LABEL>(
+		{sx,sy,sz},
+		{width, sx * width, sx * sy * width},
+		output,
+		capsule
+	);
+}
+
 template <typename LABEL>
 py::array dilate_helper(
 	LABEL* labels, LABEL* output,
@@ -135,20 +157,7 @@ py::array dilate_helper(
 		}
 	}
 
-	py::capsule capsule(output, [](void* ptr) {
-	    if (ptr) {
-	        delete[] static_cast<LABEL*>(ptr);
-	    }
-	});
-
-	uint64_t width = sizeof(LABEL);
-
-    return py::array_t<LABEL>(
-        {sx,sy,sz},
-        {width, sx * width, sxy * width},
-        output,
-        capsule
-    );
+	return to_numpy(output, sx, sy, sz);
 }
 
 // assumes fortran order
@@ -314,20 +323,7 @@ py::array erode_helper(
 		}
 	}
 
-	py::capsule capsule(output, [](void* ptr) {
-	    if (ptr) {
-	        delete[] static_cast<LABEL*>(ptr);
-	    }
-	});
-
-	uint64_t width = sizeof(LABEL);
-
-    return py::array_t<LABEL>(
-        {sx,sy,sz},
-        {width, sx * width, sxy * width},
-        output,
-        capsule
-    );
+	return to_numpy(output, sx, sy, sz);
 }
 
 // assumes fortran order
