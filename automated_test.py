@@ -97,5 +97,16 @@ def test_dilate():
 
 	assert np.all(out == ans)
 
+def test_erode():
+	labels = np.ones((3,3,3), dtype=bool)
+	out = fastmorph.erode(labels)
+	assert np.sum(out) == 1 and out[1,1,1] == True
+
+	out = fastmorph.erode(out)
+	assert not np.any(out)
+
+	out = fastmorph.erode(out)
+	assert not np.any(out)
+
 
 
