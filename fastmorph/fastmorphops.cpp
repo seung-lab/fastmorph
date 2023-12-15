@@ -291,27 +291,40 @@ py::array erode_helper(
 		pure_right = is_pure(right);
 	};
 
-	bool stale_stencil = true;
+	int stale_stencil = 3;
 
 	for (uint64_t z = 0; z < sz; z++) {
 		for (uint64_t y = 0; y < sy; y++) {
-			stale_stencil = true;
+			stale_stencil = 3;
 			for (uint64_t x = 0; x < sx; x++) {
 				uint64_t loc = x + sx * (y + sy * z);
 
 				if (labels[loc] == 0) {
-					stale_stencil = true;
+					stale_stencil++;
 					continue;
 				}
 
-				if (stale_stencil) {
+				if (stale_stencil == 1) {
+					advance_stencil(x-1,y,z);
+					stale_stencil = 0;
+				}
+				else if (stale_stencil == 2) {
+					left = right;
+					pure_left = pure_right;
+					fill_partial_stencil_fn(x,y,z,middle);
+					fill_partial_stencil_fn(x+1,y,z,right);
+					pure_middle = is_pure(middle);
+					pure_right = is_pure(right);
+					stale_stencil = 0;					
+				}
+				else if (stale_stencil >= 3) {
 					fill_partial_stencil_fn(x-1,y,z,left);
 					fill_partial_stencil_fn(x,y,z,middle);
 					fill_partial_stencil_fn(x+1,y,z,right);
 					pure_left = is_pure(left);
 					pure_middle = is_pure(middle);
 					pure_right = is_pure(right);
-					stale_stencil = false;
+					stale_stencil = 0;
 				}
 
 				if (pure_left && pure_middle && pure_right) {
