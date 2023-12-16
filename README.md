@@ -9,6 +9,20 @@ import fastmorph
 # may be binary or unsigned integer 2D or 3D image
 labels = np.load("my_labels.npy")
 
+
+# multi-label capable morphological operators
+# they use a 3x3x3 all on structuring element
+# dilate picks the mode of surrounding labels
+
+# by default only background (0) labels are filled
+morphed = fastmorph.dilate(labels, parallel=2)
+# processes every voxel
+morphed = fastmorph.dilate(labels, background_only=False, parallel=2)
+
+morphed = fastmorph.erode(labels)
+morphed = fastmorph.opening(labels, parallel=2)
+morphed = fastmorph.closing(labels, parallel=2)
+
 # Dilate only supports binary images at this time.
 # Radius is specified in physical units, but
 # by default anisotropy = (1,1,1) so it is the 
