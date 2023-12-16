@@ -55,23 +55,32 @@ def erode(labels:np.ndarray) -> np.ndarray:
   output = fastmorphops.erode(labels)
   return output.view(labels.dtype)
 
-def opening(labels:np.ndarray, background_only:bool = True) -> np.ndarray:
+def opening(
+  labels:np.ndarray, 
+  background_only:bool = True,
+  parallel:int = 1,
+) -> np.ndarray:
   """Performs morphological opening of labels.
 
   background_only is passed through to dilate.
     True: Only evaluate background voxels for dilation.
     False: Allow labels to erode each other as they grow.
+  parallel: how many pthreads to use in a threadpool
   """
-  return dilate(erode(labels), background_only)
+  return dilate(erode(labels), background_only, parallel)
 
-def closing(labels:np.ndarray, background_only:bool = True) -> np.ndarray:
+def closing(
+  labels:np.ndarray, 
+  background_only:bool = True,
+) -> np.ndarray:
   """Performs morphological closing of labels.
 
   background_only is passed through to dilate.
     True: Only evaluate background voxels for dilation.
     False: Allow labels to erode each other as they grow.
+  parallel: how many pthreads to use in a threadpool
   """
-  return erode(dilate(labels, background_only))
+  return erode(dilate(labels, background_only, parallel))
 
 def spherical_dilate(
   labels:np.ndarray, 
