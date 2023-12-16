@@ -101,7 +101,7 @@ def spherical_dilate(
   anisotropy: voxel resolution in x, y, and z
   in_place: save memory by modifying labels directly instead of creating a new image
 
-  Returns: dilated binary iamge
+  Returns: dilated binary image
   """
   assert np.issubdtype(labels.dtype, bool), "Dilation is currently only supported for binary images."
   dt = edt.edt(labels == 0, parallel=parallel, anisotropy=anisotropy)
