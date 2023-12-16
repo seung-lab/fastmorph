@@ -30,7 +30,6 @@ def dilate(
 
   parallel: how many pthreads to use in a threadpool
   """
-
   if parallel == 0:
     parallel = mp.cpu_count()
   parallel = min(parallel, mp.cpu_count())
@@ -41,7 +40,7 @@ def dilate(
   output = fastmorphops.dilate(labels, background_only, parallel)
   return output.view(labels.dtype)
 
-def erode(labels:np.ndarray) -> np.ndarray:
+def erode(labels:np.ndarray, parallel:int = 1) -> np.ndarray:
   """
   Erodes forground labels using a 3x3x3 stencil with
   all elements "on".
@@ -49,10 +48,14 @@ def erode(labels:np.ndarray) -> np.ndarray:
   labels: a 3D numpy array containing integer labels
     representing shapes to be dilated.
   """
+  if parallel == 0:
+    parallel = mp.cpu_count()
+  parallel = min(parallel, mp.cpu_count())
+
   labels = np.asfortranarray(labels)
   while labels.ndim < 3:
     labels = labels[..., np.newaxis]
-  output = fastmorphops.erode(labels)
+  output = fastmorphops.erode(labels, parallel)
   return output.view(labels.dtype)
 
 def opening(
@@ -67,7 +70,7 @@ def opening(
     False: Allow labels to erode each other as they grow.
   parallel: how many pthreads to use in a threadpool
   """
-  return dilate(erode(labels), background_only, parallel)
+  return dilate(erode(labels, parallel), background_only, parallel)
 
 def closing(
   labels:np.ndarray, 
@@ -80,7 +83,7 @@ def closing(
     False: Allow labels to erode each other as they grow.
   parallel: how many pthreads to use in a threadpool
   """
-  return erode(dilate(labels, background_only, parallel))
+  return erode(dilate(labels, background_only, parallel), parallel)
 
 def spherical_dilate(
   labels:np.ndarray, 

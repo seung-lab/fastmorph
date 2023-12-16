@@ -260,19 +260,12 @@ py::array dilate(
 template <typename LABEL>
 py::array erode_helper(
 	LABEL* labels, LABEL* output,
-	const uint64_t sx, const uint64_t sy, const uint64_t sz
+	const uint64_t sx, const uint64_t sy, const uint64_t sz,
+	const uint64_t threads
 ) {
 
 	// assume a 3x3x3 stencil with all voxels on
 	const uint64_t sxy = sx * sy;
-
-	// 3x3 sets of labels, as index advances 
-	// right is leading edge, middle becomes left, 
-	// left gets deleted
-	std::vector<LABEL> left, middle, right;
-	bool pure_left = false;
-	bool pure_middle = false;
-	bool pure_right = false;
 
 	auto fill_partial_stencil_fn = [&](
 		const uint64_t xi, const uint64_t yi, const uint64_t zi, 
@@ -330,65 +323,105 @@ py::array erode_helper(
 		return true;
 	};
 
-	auto advance_stencil = [&](uint64_t x, uint64_t y, uint64_t z) {
-		left = middle;
-		middle = right;
-		pure_left = pure_middle;
-		pure_middle = pure_right;
-		fill_partial_stencil_fn(x+2,y,z,right);
-		pure_right = is_pure(right);
+	auto process_block = [&](
+		const uint64_t xs, const uint64_t xe, 
+		const uint64_t ys, const uint64_t ye, 
+		const uint64_t zs, const uint64_t ze
+	){
+		// 3x3 sets of labels, as index advances 
+		// right is leading edge, middle becomes left, 
+		// left gets deleted
+		std::vector<LABEL> left, middle, right;
+		bool pure_left = false;
+		bool pure_middle = false;
+		bool pure_right = false;
+
+		auto advance_stencil = [&](uint64_t x, uint64_t y, uint64_t z) {
+			left = middle;
+			middle = right;
+			pure_left = pure_middle;
+			pure_middle = pure_right;
+			fill_partial_stencil_fn(x+2,y,z,right);
+			pure_right = is_pure(right);
+		};
+
+		int stale_stencil = 3;
+
+		for (uint64_t z = 0; z < sz; z++) {
+			for (uint64_t y = 0; y < sy; y++) {
+				stale_stencil = 3;
+				for (uint64_t x = 0; x < sx; x++) {
+					uint64_t loc = x + sx * (y + sy * z);
+
+					if (labels[loc] == 0) {
+						stale_stencil++;
+						continue;
+					}
+
+					if (stale_stencil == 1) {
+						advance_stencil(x-1,y,z);
+						stale_stencil = 0;
+					}
+					else if (stale_stencil == 2) {
+						left = right;
+						pure_left = pure_right;
+						fill_partial_stencil_fn(x,y,z,middle);
+						fill_partial_stencil_fn(x+1,y,z,right);
+						pure_middle = is_pure(middle);
+						pure_right = is_pure(right);
+						stale_stencil = 0;					
+					}
+					else if (stale_stencil >= 3) {
+						fill_partial_stencil_fn(x-1,y,z,left);
+						fill_partial_stencil_fn(x,y,z,middle);
+						fill_partial_stencil_fn(x+1,y,z,right);
+						pure_left = is_pure(left);
+						pure_middle = is_pure(middle);
+						pure_right = is_pure(right);
+						stale_stencil = 0;
+					}
+
+					if (pure_left && pure_middle && pure_right) {
+						output[loc] = labels[loc];
+					}
+
+					advance_stencil(x,y,z);
+				}
+			}
+		}
 	};
 
-	int stale_stencil = 3;
+	const uint64_t block_size = 64;
 
-	for (uint64_t z = 0; z < sz; z++) {
-		for (uint64_t y = 0; y < sy; y++) {
-			stale_stencil = 3;
-			for (uint64_t x = 0; x < sx; x++) {
-				uint64_t loc = x + sx * (y + sy * z);
+	const uint64_t grid_x = std::max(static_cast<uint64_t>((sx + block_size/2) / block_size), static_cast<uint64_t>(1));
+	const uint64_t grid_y = std::max(static_cast<uint64_t>((sy + block_size/2) / block_size), static_cast<uint64_t>(1));
+	const uint64_t grid_z = std::max(static_cast<uint64_t>((sz + block_size/2) / block_size), static_cast<uint64_t>(1));
 
-				if (labels[loc] == 0) {
-					stale_stencil++;
-					continue;
-				}
+	const int real_threads = std::max(std::min(threads, grid_x * grid_y * grid_z), static_cast<uint64_t>(0));
 
-				if (stale_stencil == 1) {
-					advance_stencil(x-1,y,z);
-					stale_stencil = 0;
-				}
-				else if (stale_stencil == 2) {
-					left = right;
-					pure_left = pure_right;
-					fill_partial_stencil_fn(x,y,z,middle);
-					fill_partial_stencil_fn(x+1,y,z,right);
-					pure_middle = is_pure(middle);
-					pure_right = is_pure(right);
-					stale_stencil = 0;					
-				}
-				else if (stale_stencil >= 3) {
-					fill_partial_stencil_fn(x-1,y,z,left);
-					fill_partial_stencil_fn(x,y,z,middle);
-					fill_partial_stencil_fn(x+1,y,z,right);
-					pure_left = is_pure(left);
-					pure_middle = is_pure(middle);
-					pure_right = is_pure(right);
-					stale_stencil = 0;
-				}
+	ThreadPool pool(real_threads);
 
-				if (pure_left && pure_middle && pure_right) {
-					output[loc] = labels[loc];
-				}
-
-				advance_stencil(x,y,z);
+	for (uint64_t gz = 0; gz < grid_z; gz++) {
+		for (uint64_t gy = 0; gy < grid_y; gy++) {
+			for (uint64_t gx = 0; gx < grid_x; gx++) {
+				pool.enqueue([=]() {
+					process_block(
+						gx * block_size, std::min((gx+1) * block_size, sx),
+						gy * block_size, std::min((gy+1) * block_size, sy),
+						gz * block_size, std::min((gz+1) * block_size, sz)
+					);
+				});
 			}
 		}
 	}
+
+	pool.join();
 
 	return to_numpy(output, sx, sy, sz);
 }
 
 // assumes fortran order
-py::array erode(const py::array &labels) {
+py::array erode(const py::array &labels, const uint64_t threads) {
 	int width = labels.dtype().itemsize();
 
 	const uint64_t sx = labels.shape()[0];
@@ -404,28 +437,32 @@ py::array erode(const py::array &labels) {
 		output = erode_helper(
 			reinterpret_cast<uint8_t*>(labels_ptr),
 			reinterpret_cast<uint8_t*>(output_ptr),
-			sx, sy, sz
+			sx, sy, sz,
+			threads
 		);
 	}
 	else if (width == 2) {
 		output = erode_helper(
 			reinterpret_cast<uint16_t*>(labels_ptr),
 			reinterpret_cast<uint16_t*>(output_ptr),
-			sx, sy, sz
+			sx, sy, sz,
+			threads
 		);
 	}
 	else if (width == 4) {
 		output = erode_helper(
 			reinterpret_cast<uint32_t*>(labels_ptr),
 			reinterpret_cast<uint32_t*>(output_ptr),
-			sx, sy, sz
+			sx, sy, sz,
+			threads
 		);
 	}
 	else if (width == 8) {
 		output = erode_helper(
 			reinterpret_cast<uint64_t*>(labels_ptr),
 			reinterpret_cast<uint64_t*>(output_ptr),
-			sx, sy, sz
+			sx, sy, sz,
+			threads
 		);
 	}
 
