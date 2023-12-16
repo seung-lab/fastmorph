@@ -94,25 +94,35 @@ py::array dilate_helper(
 		fill_partial_stencil_fn(x+2,y,z,right);
 	};
 
-	bool stale_stencil = true;
+	int stale_stencil = 3;
 
 	for (uint64_t z = 0; z < sz; z++) {
 		for (uint64_t y = 0; y < sy; y++) {
-			stale_stencil = true;
+			stale_stencil = 3;
 			for (uint64_t x = 0; x < sx; x++) {
 				uint64_t loc = x + sx * (y + sy * z);
 
 				if (background_only && labels[loc] != 0) {
 					output[loc] = labels[loc];
-					stale_stencil = true;
+					stale_stencil++;
 					continue;
 				}
 
-				if (stale_stencil) {
+				if (stale_stencil == 1) {
+					advance_stencil(x-1,y,z);
+					stale_stencil = 0;
+				}
+				else if (stale_stencil == 2) {
+					left = right;
+					fill_partial_stencil_fn(x,y,z,middle);
+					fill_partial_stencil_fn(x+1,y,z,right);
+					stale_stencil = 0;					
+				}
+				else if (stale_stencil >= 3) {
 					fill_partial_stencil_fn(x-1,y,z,left);
 					fill_partial_stencil_fn(x,y,z,middle);
 					fill_partial_stencil_fn(x+1,y,z,right);
-					stale_stencil = false;
+					stale_stencil = 0;
 				}
 
 				if (left.size() + middle.size() + right.size() == 0) {
