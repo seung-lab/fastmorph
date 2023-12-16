@@ -347,10 +347,10 @@ py::array erode_helper(
 
 		int stale_stencil = 3;
 
-		for (uint64_t z = 0; z < sz; z++) {
-			for (uint64_t y = 0; y < sy; y++) {
+		for (uint64_t z = zs; z < ze; z++) {
+			for (uint64_t y = ys; y < ye; y++) {
 				stale_stencil = 3;
-				for (uint64_t x = 0; x < sx; x++) {
+				for (uint64_t x = xs; x < xe; x++) {
 					uint64_t loc = x + sx * (y + sy * z);
 
 					if (labels[loc] == 0) {
