@@ -6,6 +6,8 @@
 
 #include <vector>
 #include <cstdlib>
+#include <cmath>
+#include "threadpool.h"
 
 namespace py = pybind11;
 
@@ -35,16 +37,11 @@ template <typename LABEL>
 py::array dilate_helper(
 	LABEL* labels, LABEL* output,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
-	const bool background_only
+	const bool background_only, const int threads = 1
 ) {
 
 	// assume a 3x3x3 stencil with all voxels on
 	const uint64_t sxy = sx * sy;
-
-	// 3x3 sets of labels, as index advances 
-	// right is leading edge, middle becomes left, 
-	// left gets deleted
-	std::vector<LABEL> left, middle, right;
 
 	auto fill_partial_stencil_fn = [&](
 		const uint64_t xi, const uint64_t yi, const uint64_t zi, 
@@ -88,90 +85,129 @@ py::array dilate_helper(
 		}
 	};
 
-	auto advance_stencil = [&](uint64_t x, uint64_t y, uint64_t z) {
-		left = middle;
-		middle = right;
-		fill_partial_stencil_fn(x+2,y,z,right);
+	auto process_block = [&](
+		const uint64_t xs, const uint64_t xe, 
+		const uint64_t ys, const uint64_t ye, 
+		const uint64_t zs, const uint64_t ze
+	){
+		// 3x3 sets of labels, as index advances 
+		// right is leading edge, middle becomes left, 
+		// left gets deleted
+		std::vector<LABEL> left, middle, right;
+
+		auto advance_stencil = [&](uint64_t x, uint64_t y, uint64_t z) {
+			left = middle;
+			middle = right;
+			fill_partial_stencil_fn(x+2,y,z,right);
+		};
+
+		int stale_stencil = 3;
+
+		for (uint64_t z = zs; z < ze; z++) {
+			for (uint64_t y = ys; y < ye; y++) {
+				stale_stencil = 3;
+				for (uint64_t x = xs; x < xe; x++) {
+					uint64_t loc = x + sx * (y + sy * z);
+
+					if (background_only && labels[loc] != 0) {
+						output[loc] = labels[loc];
+						stale_stencil++;
+						continue;
+					}
+
+					if (stale_stencil == 1) {
+						advance_stencil(x-1,y,z);
+						stale_stencil = 0;
+					}
+					else if (stale_stencil == 2) {
+						left = right;
+						fill_partial_stencil_fn(x,y,z,middle);
+						fill_partial_stencil_fn(x+1,y,z,right);
+						stale_stencil = 0;					
+					}
+					else if (stale_stencil >= 3) {
+						fill_partial_stencil_fn(x-1,y,z,left);
+						fill_partial_stencil_fn(x,y,z,middle);
+						fill_partial_stencil_fn(x+1,y,z,right);
+						stale_stencil = 0;
+					}
+
+					if (left.size() + middle.size() + right.size() == 0) {
+						advance_stencil(x,y,z);
+						continue;
+					} 
+
+					std::vector<LABEL> neighbors;
+					neighbors.reserve(26);
+
+					neighbors.insert(neighbors.end(), left.begin(), left.end());
+					neighbors.insert(neighbors.end(), middle.begin(), middle.end());
+					neighbors.insert(neighbors.end(), right.begin(), right.end());
+
+					std::sort(neighbors.begin(), neighbors.end());
+
+					LABEL mode_label = neighbors[0];
+					int ct = 1;
+					int max_ct = 1;
+					int size = neighbors.size();
+					for (int i = 1; i < size; i++) {
+						if (neighbors[i] != neighbors[i-1]) {
+							if (ct > max_ct) {
+								mode_label = neighbors[i-1];
+								max_ct = ct;
+							}
+							ct = 1;
+
+							if (size - i < max_ct) {
+								break;
+							}
+						}
+						else {
+							ct++;
+						}
+					}
+
+					output[loc] = mode_label;
+
+					advance_stencil(x,y,z);
+				}
+			}
+		}
 	};
 
-	int stale_stencil = 3;
+	const uint64_t block_size = 64;
 
-	for (uint64_t z = 0; z < sz; z++) {
-		for (uint64_t y = 0; y < sy; y++) {
-			stale_stencil = 3;
-			for (uint64_t x = 0; x < sx; x++) {
-				uint64_t loc = x + sx * (y + sy * z);
+	const uint64_t grid_x = (sx + block_size/2) / block_size;
+	const uint64_t grid_y = (sy + block_size/2) / block_size;
+	const uint64_t grid_z = (sz + block_size/2) / block_size;
 
-				if (background_only && labels[loc] != 0) {
-					output[loc] = labels[loc];
-					stale_stencil++;
-					continue;
-				}
+	ThreadPool pool(threads);
 
-				if (stale_stencil == 1) {
-					advance_stencil(x-1,y,z);
-					stale_stencil = 0;
-				}
-				else if (stale_stencil == 2) {
-					left = right;
-					fill_partial_stencil_fn(x,y,z,middle);
-					fill_partial_stencil_fn(x+1,y,z,right);
-					stale_stencil = 0;					
-				}
-				else if (stale_stencil >= 3) {
-					fill_partial_stencil_fn(x-1,y,z,left);
-					fill_partial_stencil_fn(x,y,z,middle);
-					fill_partial_stencil_fn(x+1,y,z,right);
-					stale_stencil = 0;
-				}
-
-				if (left.size() + middle.size() + right.size() == 0) {
-					advance_stencil(x,y,z);
-					continue;
-				} 
-
-				std::vector<LABEL> neighbors;
-				neighbors.reserve(26);
-
-				neighbors.insert(neighbors.end(), left.begin(), left.end());
-				neighbors.insert(neighbors.end(), middle.begin(), middle.end());
-				neighbors.insert(neighbors.end(), right.begin(), right.end());
-
-				std::sort(neighbors.begin(), neighbors.end());
-
-				LABEL mode_label = neighbors[0];
-				int ct = 1;
-				int max_ct = 1;
-				int size = neighbors.size();
-				for (int i = 1; i < size; i++) {
-					if (neighbors[i] != neighbors[i-1]) {
-						if (ct > max_ct) {
-							mode_label = neighbors[i-1];
-							max_ct = ct;
-						}
-						ct = 1;
-
-						if (size - i < max_ct) {
-							break;
-						}
-					}
-					else {
-						ct++;
-					}
-				}
-
-				output[loc] = mode_label;
-
-				advance_stencil(x,y,z);
+	for (uint64_t gz = 0; gz < grid_z; gz++) {
+		for (uint64_t gy = 0; gy < grid_y; gy++) {
+			for (uint64_t gx = 0; gx < grid_x; gx++) {
+				pool.enqueue([=]() {
+					process_block(
+						gx * block_size, std::min((gx+1) * block_size, sx),
+						gy * block_size, std::min((gy+1) * block_size, sy),
+						gz * block_size, std::min((gz+1) * block_size, sz)
+					);
+				});
 			}
 		}
 	}
+
+	pool.join();
 
 	return to_numpy(output, sx, sy, sz);
 }
 
 // assumes fortran order
-py::array dilate(const py::array &labels, const bool background_only) {
+py::array dilate(
+	const py::array &labels, 
+	const bool background_only, 
+	const int threads
+) {
 	int width = labels.dtype().itemsize();
 
 	const uint64_t sx = labels.shape()[0];
@@ -188,7 +224,7 @@ py::array dilate(const py::array &labels, const bool background_only) {
 			reinterpret_cast<uint8_t*>(labels_ptr),
 			reinterpret_cast<uint8_t*>(output_ptr),
 			sx, sy, sz,
-			background_only
+			background_only, threads
 		);
 	}
 	else if (width == 2) {
@@ -196,7 +232,7 @@ py::array dilate(const py::array &labels, const bool background_only) {
 			reinterpret_cast<uint16_t*>(labels_ptr),
 			reinterpret_cast<uint16_t*>(output_ptr),
 			sx, sy, sz,
-			background_only
+			background_only, threads
 		);
 	}
 	else if (width == 4) {
@@ -204,7 +240,7 @@ py::array dilate(const py::array &labels, const bool background_only) {
 			reinterpret_cast<uint32_t*>(labels_ptr),
 			reinterpret_cast<uint32_t*>(output_ptr),
 			sx, sy, sz,
-			background_only
+			background_only, threads
 		);
 	}
 	else if (width == 8) {
@@ -212,7 +248,7 @@ py::array dilate(const py::array &labels, const bool background_only) {
 			reinterpret_cast<uint64_t*>(labels_ptr),
 			reinterpret_cast<uint64_t*>(output_ptr),
 			sx, sy, sz,
-			background_only
+			background_only, threads
 		);
 	}
 

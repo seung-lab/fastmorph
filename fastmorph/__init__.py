@@ -4,6 +4,7 @@ import edt
 import fill_voids
 import cc3d
 import fastremap
+import multiprocessing as mp
 
 import fastmorphops
 
@@ -11,7 +12,8 @@ AnisotropyType = Optional[Sequence[int]]
 
 def dilate(
   labels:np.ndarray,
-  background_only:bool = True
+  background_only:bool = True,
+  parallel:int = 1,
 ) -> np.ndarray:
   """
   Dilate forground labels using a 3x3x3 stencil with
@@ -25,11 +27,18 @@ def dilate(
   background_only:
     True: Only evaluate background voxels for dilation.
     False: Allow labels to erode each other as they grow.
+
+  parallel: how many pthreads to use in a threadpool
   """
+
+  if parallel == 0:
+    parallel = mp.cpu_count()
+  parallel = min(parallel, mp.cpu_count())
+
   labels = np.asfortranarray(labels)
   while labels.ndim < 3:
     labels = labels[..., np.newaxis]
-  output = fastmorphops.dilate(labels, background_only)
+  output = fastmorphops.dilate(labels, background_only, parallel)
   return output.view(labels.dtype)
 
 def erode(labels:np.ndarray) -> np.ndarray:
