@@ -37,7 +37,7 @@ template <typename LABEL>
 py::array dilate_helper(
 	LABEL* labels, LABEL* output,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
-	const bool background_only, const int threads = 1
+	const bool background_only, const uint64_t threads = 1
 ) {
 
 	// assume a 3x3x3 stencil with all voxels on
@@ -177,11 +177,13 @@ py::array dilate_helper(
 
 	const uint64_t block_size = 64;
 
-	const uint64_t grid_x = (sx + block_size/2) / block_size;
-	const uint64_t grid_y = (sy + block_size/2) / block_size;
-	const uint64_t grid_z = (sz + block_size/2) / block_size;
+	const uint64_t grid_x = std::max(static_cast<uint64_t>((sx + block_size/2) / block_size), static_cast<uint64_t>(1));
+	const uint64_t grid_y = std::max(static_cast<uint64_t>((sy + block_size/2) / block_size), static_cast<uint64_t>(1));
+	const uint64_t grid_z = std::max(static_cast<uint64_t>((sz + block_size/2) / block_size), static_cast<uint64_t>(1));
 
-	ThreadPool pool(threads);
+	const int real_threads = std::max(std::min(threads, grid_x * grid_y * grid_z), static_cast<uint64_t>(0));
+
+	ThreadPool pool(real_threads);
 
 	for (uint64_t gz = 0; gz < grid_z; gz++) {
 		for (uint64_t gy = 0; gy < grid_y; gy++) {
