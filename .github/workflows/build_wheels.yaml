@@ -1,0 +1,39 @@
+name: Build Wheels
+
+on:  
+  workflow_dispatch:
+  push:
+    tags:
+      - '*'
+env:
+  CIBW_SKIP: cp27-* cp33-* cp34-* cp35-* pp27* pp36* pp37* pp38* pp39* pp310* *-musllinux* cp312-manylinux_i686
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{matrix.arch}} for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-2019, macos-latest]
+        arch: [auto]
+        include:
+          - os: ubuntu-latest
+            arch: aarch64
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up QEMU
+        if:  ${{ matrix.arch == 'aarch64' }}
+        uses: docker/setup-qemu-action@v1
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.16.2
+        # to supply options, put them in 'env', like:
+        env:
+          CIBW_ARCHS_LINUX: ${{matrix.arch}}
+          CIBW_BEFORE_BUILD: pip install oldest-supported-numpy pybind11 wheel
+
+      - uses: actions/upload-artifact@v2
+        with:
+          path: ./wheelhouse/*.whl

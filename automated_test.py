@@ -97,6 +97,26 @@ def test_dilate():
 
 	assert np.all(out == ans)
 
+	labels = np.zeros((3,3,3), dtype=int)
+	labels[0,1,1] = 1
+	labels[2,1,1] = 2
+
+	out = fastmorph.dilate(labels)
+	ans = np.ones((3,3,3), dtype=int)
+	ans[2,:,:] = 2
+	assert np.all(ans == out)
+
+	labels = np.zeros((3,3,3), dtype=int, order="F")
+	labels[0,1,1] = 1
+	labels[1,1,1] = 2
+	labels[2,1,1] = 2
+
+	out = fastmorph.dilate(labels)
+	ans = np.ones((3,3,3), dtype=int, order="F")
+	ans[1:,:,:] = 2
+	assert np.all(ans == out)
+
+
 def test_erode():
 	labels = np.ones((3,3,3), dtype=bool)
 	out = fastmorph.erode(labels)
