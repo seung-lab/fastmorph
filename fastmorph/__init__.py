@@ -4,8 +4,86 @@ import edt
 import fill_voids
 import cc3d
 import fastremap
+import multiprocessing as mp
+
+import fastmorphops
 
 AnisotropyType = Optional[Sequence[int]]
+
+def dilate(
+  labels:np.ndarray,
+  background_only:bool = True,
+  parallel:int = 1,
+) -> np.ndarray:
+  """
+  Dilate forground labels using a 3x3x3 stencil with
+  all elements "on".
+
+  The mode of the voxels surrounding the stencil wins.
+
+  labels: a 3D numpy array containing integer labels
+    representing shapes to be dilated.
+
+  background_only:
+    True: Only evaluate background voxels for dilation.
+    False: Allow labels to erode each other as they grow.
+
+  parallel: how many pthreads to use in a threadpool
+  """
+  if parallel == 0:
+    parallel = mp.cpu_count()
+  parallel = min(parallel, mp.cpu_count())
+
+  labels = np.asfortranarray(labels)
+  while labels.ndim < 3:
+    labels = labels[..., np.newaxis]
+  output = fastmorphops.dilate(labels, background_only, parallel)
+  return output.view(labels.dtype)
+
+def erode(labels:np.ndarray, parallel:int = 1) -> np.ndarray:
+  """
+  Erodes forground labels using a 3x3x3 stencil with
+  all elements "on".
+
+  labels: a 3D numpy array containing integer labels
+    representing shapes to be dilated.
+  """
+  if parallel == 0:
+    parallel = mp.cpu_count()
+  parallel = min(parallel, mp.cpu_count())
+
+  labels = np.asfortranarray(labels)
+  while labels.ndim < 3:
+    labels = labels[..., np.newaxis]
+  output = fastmorphops.erode(labels, parallel)
+  return output.view(labels.dtype)
+
+def opening(
+  labels:np.ndarray, 
+  background_only:bool = True,
+  parallel:int = 1,
+) -> np.ndarray:
+  """Performs morphological opening of labels.
+
+  background_only is passed through to dilate.
+    True: Only evaluate background voxels for dilation.
+    False: Allow labels to erode each other as they grow.
+  parallel: how many pthreads to use in a threadpool
+  """
+  return dilate(erode(labels, parallel), background_only, parallel)
+
+def closing(
+  labels:np.ndarray, 
+  background_only:bool = True,
+) -> np.ndarray:
+  """Performs morphological closing of labels.
+
+  background_only is passed through to dilate.
+    True: Only evaluate background voxels for dilation.
+    False: Allow labels to erode each other as they grow.
+  parallel: how many pthreads to use in a threadpool
+  """
+  return erode(dilate(labels, background_only, parallel), parallel)
 
 def spherical_dilate(
   labels:np.ndarray, 
@@ -26,7 +104,7 @@ def spherical_dilate(
   anisotropy: voxel resolution in x, y, and z
   in_place: save memory by modifying labels directly instead of creating a new image
 
-  Returns: dilated binary iamge
+  Returns: dilated binary image
   """
   assert np.issubdtype(labels.dtype, bool), "Dilation is currently only supported for binary images."
   dt = edt.edt(labels == 0, parallel=parallel, anisotropy=anisotropy)

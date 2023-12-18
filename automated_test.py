@@ -76,3 +76,57 @@ def test_spherical_close():
 	res = fastmorph.spherical_close(labels, radius=1)
 	assert res[5,5,5] == True
 
+
+def test_dilate():
+	labels = np.zeros((3,3,3), dtype=bool)
+
+	out = fastmorph.dilate(labels)
+	assert not np.any(out)
+
+	labels[1,1,1] = True
+
+	out = fastmorph.dilate(labels)
+	assert np.all(out)
+
+	labels = np.zeros((3,3,3), dtype=bool)
+	labels[0,0,0] = True
+	out = fastmorph.dilate(labels)
+
+	ans = np.zeros((3,3,3), dtype=bool)
+	ans[:2,:2,:2] = True
+
+	assert np.all(out == ans)
+
+	labels = np.zeros((3,3,3), dtype=int)
+	labels[0,1,1] = 1
+	labels[2,1,1] = 2
+
+	out = fastmorph.dilate(labels)
+	ans = np.ones((3,3,3), dtype=int)
+	ans[2,:,:] = 2
+	assert np.all(ans == out)
+
+	labels = np.zeros((3,3,3), dtype=int, order="F")
+	labels[0,1,1] = 1
+	labels[1,1,1] = 2
+	labels[2,1,1] = 2
+
+	out = fastmorph.dilate(labels)
+	ans = np.ones((3,3,3), dtype=int, order="F")
+	ans[1:,:,:] = 2
+	assert np.all(ans == out)
+
+
+def test_erode():
+	labels = np.ones((3,3,3), dtype=bool)
+	out = fastmorph.erode(labels)
+	assert np.sum(out) == 1 and out[1,1,1] == True
+
+	out = fastmorph.erode(out)
+	assert not np.any(out)
+
+	out = fastmorph.erode(out)
+	assert not np.any(out)
+
+
+
