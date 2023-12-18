@@ -149,10 +149,26 @@ py::array dilate_helper(
 
 					std::sort(neighbors.begin(), neighbors.end());
 
+					int size = neighbors.size();
+
+					// the middle and right will be the next
+					// left and middle and will dominate the
+					// right so we can skip some calculation. 
+					if (size >= 19
+						&& neighbors[0] == neighbors[size - 1]) {
+
+						output[loc] = neighbors[0];
+						if (x < sx - 1) {
+							output[loc+1] = neighbors[0];
+						}
+						stale_stencil = 2;
+						x++;
+						continue;
+					}
+
 					LABEL mode_label = neighbors[0];
 					int ct = 1;
 					int max_ct = 1;
-					int size = neighbors.size();
 					for (int i = 1; i < size; i++) {
 						if (neighbors[i] != neighbors[i-1]) {
 							if (ct > max_ct) {
@@ -175,6 +191,13 @@ py::array dilate_helper(
 					}
 
 					output[loc] = mode_label;
+
+					if (ct >= 19 && x < sx - 1) {
+						output[loc+1] = mode_label;
+						stale_stencil = 2;
+						x++;
+						continue;
+					}
 
 					advance_stencil(x,y,z);
 				}
