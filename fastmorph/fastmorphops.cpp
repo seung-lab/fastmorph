@@ -103,6 +103,10 @@ py::array dilate_helper(
 
 		int stale_stencil = 3;
 
+
+		std::vector<LABEL> neighbors;
+		neighbors.reserve(27);
+
 		for (uint64_t z = zs; z < ze; z++) {
 			for (uint64_t y = ys; y < ye; y++) {
 				stale_stencil = 3;
@@ -137,8 +141,7 @@ py::array dilate_helper(
 						continue;
 					} 
 
-					std::vector<LABEL> neighbors;
-					neighbors.reserve(26);
+					neighbors.clear();
 
 					neighbors.insert(neighbors.end(), left.begin(), left.end());
 					neighbors.insert(neighbors.end(), middle.begin(), middle.end());
