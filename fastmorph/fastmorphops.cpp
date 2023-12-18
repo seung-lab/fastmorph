@@ -167,6 +167,10 @@ py::array dilate_helper(
 						}
 					}
 
+					if (ct > max_ct) {
+						mode_label = neighbors[size - 1];
+					}
+
 					output[loc] = mode_label;
 
 					advance_stencil(x,y,z);
