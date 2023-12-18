@@ -1,0 +1,3 @@
+include fastmorph/threadpool.h
+include fastmorph/fastmorphops.cpp
+include LICENSE
