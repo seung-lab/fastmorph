@@ -6,12 +6,10 @@ This is a collection of morphological 3D image operations that are tuned for wor
 
 We provide the following multithreaded operations:
 
-- Dilation
-- Erosion 
-- Opening 
-- Closing
-- Spherical Dilation (binary images)
-- Fill Voids
+- Multi-Label Stenciled Dilation, Erosion, Opening, Closing
+- Multi-Label Spherical Erosion
+- Binary Spherical Dilation, Opening, and Closing
+- Multi-Label Fill Voids
 
 Highlights compared to other libraries:
 
