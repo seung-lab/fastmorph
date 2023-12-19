@@ -85,7 +85,16 @@ dilate / background_only=False / 8 threads:  5.46 sec
 skimage expand_labels / 1 thread:  75.20 sec
 ```
 
+### Memory Profiles
 
+<center>
+<img src="https://github.com/seung-lab/fastmorph/blob/15c4c27ad3255c8ef959ceb67facd65e18eff2e4/memory-profile-dilate-bg-only-false.jpg" />
+</center>
 
+<center>
+<img src="https://github.com/seung-lab/fastmorph/blob/15c4c27ad3255c8ef959ceb67facd65e18eff2e4/memory-profile-dilate-bg-only-true.jpg" />
+</center>
 
-
+<center>
+<img src="https://github.com/seung-lab/fastmorph/blob/15c4c27ad3255c8ef959ceb67facd65e18eff2e4/memory-profile-skimage-expand_labels.jpg" />
+</center>
