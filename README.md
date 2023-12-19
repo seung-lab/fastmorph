@@ -1,4 +1,4 @@
-![Automated Tests](https://github.com/seung-lab/fastmorph/actions/workflows/run_tests.yml/badge.svg)
+![Automated Tests](https://github.com/seung-lab/fastmorph/actions/workflows/run_tests.yml/badge.svg) [![PyPI version](https://badge.fury.io/py/fastmorph.svg)](https://badge.fury.io/py/fastmorph)
 
 # fastmorph: multilabel 3D morphological image processing functions.
 
