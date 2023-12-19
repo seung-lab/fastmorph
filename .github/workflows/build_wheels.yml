@@ -21,7 +21,7 @@ jobs:
             arch: aarch64
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Set up QEMU
         if:  ${{ matrix.arch == 'aarch64' }}
@@ -34,6 +34,6 @@ jobs:
           CIBW_ARCHS_LINUX: ${{matrix.arch}}
           CIBW_BEFORE_BUILD: pip install oldest-supported-numpy pybind11 wheel setuptools cython
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
           path: ./wheelhouse/*.whl
