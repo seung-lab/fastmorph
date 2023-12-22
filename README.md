@@ -72,17 +72,18 @@ filled_labels, ct = fastmorph.fill_holes(labels, return_fill_count=True, remove_
 A test run on an M1 Macbook Pro on `connectomics.npy.ckl`, a 512<sup>3</sup> volume with over 2000 dense labels had the following results.
 
 ```
-erode / 1 thread:  7.70 sec
-erode / 2 threads:  4.10 sec
-erode / 4 threads:  3.02 sec
-dilate / background_only=True / 1 thread:  1.15 sec
-dilate / background_only=True / 2 threads:  0.65 sec
-dilate / background_only=True / 4 threads:  0.48 sec
-dilate / background_only=False / 1 thread:  14.31 sec
-dilate / background_only=False / 2 threads:  7.47 sec
-dilate / background_only=False / 4 threads:  8.09 sec
-dilate / background_only=False / 8 threads:  5.46 sec
-skimage expand_labels / 1 thread:  75.20 sec
+erode / 1 thread: 5.812 sec
+erode / 2 threads: 2.953 sec
+erode / 4 threads: 2.279 sec
+dilate / background_only=True / 1 thread: 1.095 sec # computes mode
+dilate / background_only=True / 2 threads: 0.639 sec
+dilate / background_only=True / 4 threads: 0.434 sec
+dilate / background_only=False / 1 thread: 14.171 sec
+dilate / background_only=False / 2 threads: 7.156 sec
+dilate / background_only=False / 4 threads: 4.856 sec
+dilate / background_only=False / 8 threads: 3.906 sec
+scipy grey_dilation / 1 thread 14.780 sec # computes maximum
+skimage expand_labels / 1 thread: 64.221 sec # spherical dilate
 ```
 
 ### Memory Profiles
