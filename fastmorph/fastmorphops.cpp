@@ -412,7 +412,13 @@ py::array erode_helper(
 					}
 
 					if (pure_left && pure_middle && pure_right) {
-						output[loc] = labels[loc];
+						if (
+							labels[loc] == left[0] 
+							&& labels[loc] == middle[0] 
+							&& labels[loc] == right[0]
+						) {
+							output[loc] = labels[loc];
+						}
 					}
 
 					advance_stencil(x,y,z);
