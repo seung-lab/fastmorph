@@ -395,23 +395,48 @@ py::array erode_helper(
 					else if (stale_stencil == 2) {
 						left = right;
 						pure_left = pure_right;
-						fill_partial_stencil_fn(x,y,z,middle);
 						fill_partial_stencil_fn(x+1,y,z,right);
-						pure_middle = is_pure(middle);
 						pure_right = is_pure(right);
+						if (!pure_right) {
+							x += 2;
+							stale_stencil = 3;
+							continue;
+						}
+						fill_partial_stencil_fn(x,y,z,middle);
+						pure_middle = is_pure(middle);
 						stale_stencil = 0;					
 					}
 					else if (stale_stencil >= 3) {
-						fill_partial_stencil_fn(x-1,y,z,left);
-						fill_partial_stencil_fn(x,y,z,middle);
 						fill_partial_stencil_fn(x+1,y,z,right);
-						pure_left = is_pure(left);
-						pure_middle = is_pure(middle);
 						pure_right = is_pure(right);
+						if (!pure_right) {
+							x += 2;
+							stale_stencil = 3;
+							continue;
+						}
+						fill_partial_stencil_fn(x,y,z,middle);
+						pure_middle = is_pure(middle);
+						if (!pure_middle) {
+							x++;
+							stale_stencil = 2;
+							continue;
+						}
+						fill_partial_stencil_fn(x-1,y,z,left);
+						pure_left = is_pure(left);
 						stale_stencil = 0;
 					}
 
-					if (pure_left && pure_middle && pure_right) {
+					if (!pure_right) {
+						x += 2;
+						stale_stencil = 3;
+						continue;
+					}
+					else if (!pure_middle) {
+						x++;
+						stale_stencil = 2;
+						continue;
+					}
+					else if (pure_left) {
 						if (
 							labels[loc] == left[0] 
 							&& labels[loc] == middle[0] 
