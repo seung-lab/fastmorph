@@ -128,5 +128,17 @@ def test_erode():
 	out = fastmorph.erode(out)
 	assert not np.any(out)
 
+	labels = np.ones((3,3,3), dtype=int, order="F")
+	labels[0,:,:] = 1
+	labels[1,:,:] = 2
+	labels[2,:,:] = 3
+
+	out = fastmorph.erode(labels)
+	ans = np.zeros((3,3,3), dtype=int, order="F")
+
+	assert np.all(ans == out)
+
+
+
 
 
