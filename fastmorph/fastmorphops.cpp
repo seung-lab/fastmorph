@@ -199,7 +199,7 @@ py::array dilate_helper(
 						continue;
 					}
 
-					advance_stencil(x,y,z);
+					stale_stencil = 1;
 				}
 			}
 		}
@@ -446,7 +446,7 @@ py::array erode_helper(
 						}
 					}
 
-					advance_stencil(x,y,z);
+					stale_stencil = 1;
 				}
 			}
 		}
