@@ -298,60 +298,50 @@ py::array erode_helper(
 	// assume a 3x3x3 stencil with all voxels on
 	const uint64_t sxy = sx * sy;
 
-	auto fill_partial_stencil_fn = [&](
-		const uint64_t xi, const uint64_t yi, const uint64_t zi, 
-		std::vector<LABEL> &square
+	auto is_pure = [&](
+		const uint64_t xi, const uint64_t yi, const uint64_t zi
 	) {
-		square.clear();
-
-		if (xi < 0 || xi >= sx) {
-			return;
+		const LABEL zero = 0;
+		if (
+			xi < 0 || xi >= sx
+			|| yi < 0 || yi >= sy
+			|| zi < 0 || zi >= sz
+		) {
+			return zero;
 		}
 
 		const uint64_t loc = xi + sx * (yi + sy * zi);
 
-		if (labels[loc] != 0) {
-			square.push_back(labels[loc]);
+		if (labels[loc] == 0) {
+			return zero;
 		}
 
-		if (yi > 0 && labels[loc-sx] != 0) {
-			square.push_back(labels[loc-sx]);
+		if (yi > 0 && labels[loc-sx] != labels[loc]) {
+			return zero;
 		}
-		if (yi < sy - 1 && labels[loc+sx] != 0) {
-			square.push_back(labels[loc+sx]);
+		if (yi < sy - 1 && labels[loc+sx] != labels[loc]) {
+			return zero;
 		}
-		if (zi > 0 && labels[loc-sxy] != 0) {
-			square.push_back(labels[loc-sxy]);
+		if (zi > 0 && labels[loc-sxy] != labels[loc]) {
+			return zero;
 		}
-		if (zi < sz - 1 && labels[loc+sxy] != 0) {
-			square.push_back(labels[loc+sxy]);
+		if (zi < sz - 1 && labels[loc+sxy] != labels[loc]) {
+			return zero;
 		}
-		if (yi > 0 && zi > 0 && labels[loc-sx-sxy] != 0) {
-			square.push_back(labels[loc-sx-sxy]);
+		if (yi > 0 && zi > 0 && labels[loc-sx-sxy] != labels[loc]) {
+			return zero;
 		}
-		if (yi < sy -1 && zi > 0 && labels[loc+sx-sxy] != 0) {
-			square.push_back(labels[loc+sx-sxy]);
+		if (yi < sy -1 && zi > 0 && labels[loc+sx-sxy] != labels[loc]) {
+			return zero;
 		}
-		if (yi > 0 && zi < sz - 1 && labels[loc-sx+sxy] != 0) {
-			square.push_back(labels[loc-sx+sxy]);
+		if (yi > 0 && zi < sz - 1 && labels[loc-sx+sxy] != labels[loc]) {
+			return zero;
 		}
-		if (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] != 0) {
-			square.push_back(labels[loc+sx+sxy]);
-		}
-	};
-
-	auto is_pure = [](std::vector<LABEL> &square){
-		if (square.size() < 9) {
-			return false;
+		if (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] != labels[loc]) {
+			return zero;
 		}
 
-		for (int i = 1; i < 9; i++) {
-			if (square[i] != square[i-1]) {
-				return false;
-			}
-		}
-
-		return true;
+		return labels[loc];
 	};
 
 	auto process_block = [&](
@@ -359,21 +349,14 @@ py::array erode_helper(
 		const uint64_t ys, const uint64_t ye, 
 		const uint64_t zs, const uint64_t ze
 	){
-		// 3x3 sets of labels, as index advances 
-		// right is leading edge, middle becomes left, 
-		// left gets deleted
-		std::vector<LABEL> left, middle, right;
-		bool pure_left = false;
-		bool pure_middle = false;
-		bool pure_right = false;
+		LABEL pure_left = 0;
+		LABEL pure_middle = 0;
+		LABEL pure_right = 0;
 
 		auto advance_stencil = [&](uint64_t x, uint64_t y, uint64_t z) {
-			left = middle;
-			middle = right;
 			pure_left = pure_middle;
 			pure_middle = pure_right;
-			fill_partial_stencil_fn(x+2,y,z,right);
-			pure_right = is_pure(right);
+			pure_right = is_pure(x+2,y,z);
 		};
 
 		int stale_stencil = 3;
@@ -385,7 +368,8 @@ py::array erode_helper(
 					uint64_t loc = x + sx * (y + sy * z);
 
 					if (labels[loc] == 0) {
-						stale_stencil++;
+						x++;
+						stale_stencil += 2;
 						continue;
 					}
 
@@ -394,36 +378,30 @@ py::array erode_helper(
 						stale_stencil = 0;
 					}
 					else if (stale_stencil == 2) {
-						left = right;
 						pure_left = pure_right;
-						fill_partial_stencil_fn(x+1,y,z,right);
-						pure_right = is_pure(right);
+						pure_right = is_pure(x+1,y,z);
 						if (!pure_right) {
 							x += 2;
 							stale_stencil = 3;
 							continue;
 						}
-						fill_partial_stencil_fn(x,y,z,middle);
-						pure_middle = is_pure(middle);
+						pure_middle = is_pure(x,y,z);
 						stale_stencil = 0;					
 					}
 					else if (stale_stencil >= 3) {
-						fill_partial_stencil_fn(x+1,y,z,right);
-						pure_right = is_pure(right);
+						pure_right = is_pure(x+1,y,z);
 						if (!pure_right) {
 							x += 2;
 							stale_stencil = 3;
 							continue;
 						}
-						fill_partial_stencil_fn(x,y,z,middle);
-						pure_middle = is_pure(middle);
+						pure_middle = is_pure(x,y,z);
 						if (!pure_middle) {
 							x++;
 							stale_stencil = 2;
 							continue;
 						}
-						fill_partial_stencil_fn(x-1,y,z,left);
-						pure_left = is_pure(left);
+						pure_left = is_pure(x-1,y,z);
 						stale_stencil = 0;
 					}
 
@@ -437,14 +415,8 @@ py::array erode_helper(
 						stale_stencil = 2;
 						continue;
 					}
-					else if (pure_left) {
-						if (
-							labels[loc] == left[0] 
-							&& labels[loc] == middle[0] 
-							&& labels[loc] == right[0]
-						) {
-							output[loc] = labels[loc];
-						}
+					else if (pure_left == pure_middle && pure_middle == pure_right) {
+						output[loc] = labels[loc];
 					}
 
 					stale_stencil = 1;
@@ -467,10 +439,11 @@ py::array erode_helper(
 		for (uint64_t gy = 0; gy < grid_y; gy++) {
 			for (uint64_t gx = 0; gx < grid_x; gx++) {
 				pool.enqueue([=]() {
+					const uint64_t one = 1;
 					process_block(
-						gx * block_size, std::min((gx+1) * block_size, sx),
-						gy * block_size, std::min((gy+1) * block_size, sy),
-						gz * block_size, std::min((gz+1) * block_size, sz)
+						std::max(one, gx * block_size), std::min((gx+1) * block_size, sx - 1),
+						std::max(one, gy * block_size), std::min((gy+1) * block_size, sy - 1),
+						std::max(one, gz * block_size), std::min((gz+1) * block_size, sz - 1)
 					);
 				});
 			}
