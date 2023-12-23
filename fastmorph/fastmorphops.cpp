@@ -153,16 +153,17 @@ py::array dilate_helper(
 
 					// the middle and right will be the next
 					// left and middle and will dominate the
-					// right so we can skip some calculation. 
-					if (size >= 19
-						&& neighbors[0] == neighbors[size - 1]) {
-
+					// right so we can skip some calculation.
+					if (neighbors[0] == neighbors[size - 1]) {
 						output[loc] = neighbors[0];
-						if (x < sx - 1) {
+						if (size >= 23 && x < sx - 1) {
 							output[loc+1] = neighbors[0];
+							stale_stencil = 2;
+							x++;
 						}
-						stale_stencil = 2;
-						x++;
+						else {
+							stale_stencil = 1;
+						}
 						continue;
 					}
 
@@ -192,7 +193,7 @@ py::array dilate_helper(
 
 					output[loc] = mode_label;
 
-					if (ct >= 19 && x < sx - 1) {
+					if (ct >= 23 && x < sx - 1) {
 						output[loc+1] = mode_label;
 						stale_stencil = 2;
 						x++;
