@@ -138,7 +138,14 @@ def test_erode():
 
 	assert np.all(ans == out)
 
+	labels = np.zeros((5,5,5), dtype=bool)
+	labels[1:4,1:4,1:4] = True
+	out = fastmorph.erode(labels)
+	assert np.sum(out) == 1 and out[2,2,2] == True
 
+	labels = np.ones((5,5,5), dtype=bool)
+	out = fastmorph.erode(labels)
+	assert np.sum(out) == 27
 
 
 
