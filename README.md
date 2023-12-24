@@ -87,6 +87,24 @@ scipy grey_erode / 1 thread: 14.412 sec
 skimage expand_labels / 1 thread: 62.248 sec
 ```
 
+Here is the performance on a completely zeroed 512<sup>3</sup> volume:
+
+```
+erode / 1 thread: 0.462 sec
+erode / 2 threads: 0.270 sec
+erode / 4 threads: 0.245 sec
+dilate / background_only=True / 1 thread: 4.752 sec
+dilate / background_only=True / 2 threads: 2.530 sec
+dilate / background_only=True / 4 threads: 1.717 sec
+dilate / background_only=False / 1 thread: 4.572 sec
+dilate / background_only=False / 2 threads: 2.419 sec
+dilate / background_only=False / 4 threads: 1.493 sec
+dilate / background_only=False / 8 threads: 1.201 sec
+scipy grey_dilation / 1 thread 10.508 sec
+scipy grey_erode / 1 thread: 10.650 sec
+skimage expand_labels / 1 thread: 33.353 sec
+```
+
 ### Memory Profiles
 
 <center>
