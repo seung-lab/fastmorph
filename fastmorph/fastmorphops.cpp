@@ -344,6 +344,33 @@ py::array erode_helper(
 		return labels[loc];
 	};
 
+	auto is_pure_fast = [&](
+		const uint64_t xi, const uint64_t yi, const uint64_t zi
+	) {
+		const LABEL zero = 0;
+		if (
+			xi < 0 || xi >= sx
+			|| yi < 0 || yi >= sy
+			|| zi < 0 || zi >= sz
+		) {
+			return zero;
+		}
+
+		const uint64_t loc = xi + sx * (yi + sy * zi);
+
+		if (zi < sz - 1 && labels[loc+sxy] != labels[loc]) {
+			return zero;
+		}
+		if (yi > 0 && zi < sz - 1 && labels[loc-sx+sxy] != labels[loc]) {
+			return zero;
+		}
+		if (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] != labels[loc]) {
+			return zero;
+		}
+
+		return labels[loc];
+	};
+
 	auto process_block = [&](
 		const uint64_t xs, const uint64_t xe, 
 		const uint64_t ys, const uint64_t ye, 
@@ -373,37 +400,70 @@ py::array erode_helper(
 						continue;
 					}
 
-					if (stale_stencil == 1) {
-						advance_stencil(x-1,y,z);
-						stale_stencil = 0;
-					}
-					else if (stale_stencil == 2) {
-						pure_left = pure_right;
-						pure_right = is_pure(x+1,y,z);
-						if (!pure_right) {
-							x += 2;
-							stale_stencil = 3;
-							continue;
+					if (z > zs && output[loc-sxy] == labels[loc]) {
+						if (stale_stencil == 1) {
+							pure_left = pure_middle;
+							pure_middle = pure_right;
+							pure_right = is_pure_fast(x+1,y,z);
 						}
-						pure_middle = is_pure(x,y,z);
-						stale_stencil = 0;					
-					}
-					else if (stale_stencil >= 3) {
-						pure_right = is_pure(x+1,y,z);
-						if (!pure_right) {
-							x += 2;
-							stale_stencil = 3;
-							continue;
+						else if (stale_stencil == 2) {
+							pure_left = pure_right;
+							pure_right = is_pure_fast(x+1,y,z);
+							if (!pure_right) {
+								x += 2;
+								stale_stencil = 3;
+								continue;
+							}
+							pure_middle = is_pure_fast(x,y,z);
 						}
-						pure_middle = is_pure(x,y,z);
-						if (!pure_middle) {
-							x++;
-							stale_stencil = 2;
-							continue;
+						else if (stale_stencil >= 3) {
+							pure_right = is_pure_fast(x+1,y,z);
+							if (!pure_right) {
+								x += 2;
+								stale_stencil = 3;
+								continue;
+							}
+							pure_middle = is_pure_fast(x,y,z);
+							if (!pure_middle) {
+								x++;
+								stale_stencil = 2;
+								continue;
+							}
+							pure_left = is_pure_fast(x-1,y,z);
 						}
-						pure_left = is_pure(x-1,y,z);
-						stale_stencil = 0;
 					}
+					else {
+						if (stale_stencil == 1) {
+							advance_stencil(x-1,y,z);
+						}
+						else if (stale_stencil == 2) {
+							pure_left = pure_right;
+							pure_right = is_pure(x+1,y,z);
+							if (!pure_right) {
+								x += 2;
+								stale_stencil = 3;
+								continue;
+							}
+							pure_middle = is_pure(x,y,z);					
+						}
+						else if (stale_stencil >= 3) {
+							pure_right = is_pure(x+1,y,z);
+							if (!pure_right) {
+								x += 2;
+								stale_stencil = 3;
+								continue;
+							}
+							pure_middle = is_pure(x,y,z);
+							if (!pure_middle) {
+								x++;
+								stale_stencil = 2;
+								continue;
+							}
+							pure_left = is_pure(x-1,y,z);
+						}
+					}
+					
+					stale_stencil = 0;
 
 					if (!pure_right) {
 						x += 2;
