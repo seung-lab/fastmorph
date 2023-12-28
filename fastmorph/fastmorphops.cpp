@@ -190,6 +190,26 @@ py::array dilate_helper(
 						continue;
 					} 
 
+					std::sort(middle.begin(), middle.end());
+					std::sort(right.begin(), right.end());
+
+					if (right.size() == 9 && right[0] == right[8]
+						&& middle.size() == 9 && middle[0] == middle[8]
+						&& right[0] == middle[0]) {
+
+
+						output[loc] = neighbors[0];
+						if (x < sx - 1) {
+							output[loc+1] = neighbors[0];
+							stale_stencil = 2;
+							x++;
+						}
+						else {
+							stale_stencil = 1;
+						}
+						continue;
+					}
+
 					neighbors.clear();
 
 					neighbors.insert(neighbors.end(), left.begin(), left.end());
