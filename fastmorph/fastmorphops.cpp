@@ -85,6 +85,29 @@ py::array dilate_helper(
 		}
 	};
 
+	auto fill_partial_stencil_fast_fn = [&](
+		const uint64_t xi, const uint64_t yi, const uint64_t zi, 
+		std::vector<LABEL> &square
+	) {
+		square.clear();
+
+		if (xi < 0 || xi >= sx) {
+			return;
+		}
+
+		const uint64_t loc = xi + sx * (yi + sy * zi);
+
+		if (zi < sz - 1 && labels[loc+sxy] != 0) {
+			square.push_back(labels[loc+sxy]);
+		}
+		if (yi > 0 && zi < sz - 1 && labels[loc-sx+sxy] != 0) {
+			square.push_back(labels[loc-sx+sxy]);
+		}
+		if (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] != 0) {
+			square.push_back(labels[loc+sx+sxy]);
+		}
+	};
+
 	auto process_block = [&](
 		const uint64_t xs, const uint64_t xe, 
 		const uint64_t ys, const uint64_t ye, 
@@ -125,22 +148,42 @@ py::array dilate_helper(
 						continue;
 					}
 
-					if (stale_stencil == 1) {
-						advance_stencil(x-1,y,z);
-						stale_stencil = 0;
+					if (z > zs && output[loc-sxy] == 0) {
+						if (stale_stencil == 1) {
+							tmp = std::move(left);
+							left = std::move(middle);
+							middle = std::move(right);
+							right = std::move(tmp);
+							fill_partial_stencil_fast_fn(x+1,y,z,right);
+						}
+						else if (stale_stencil == 2) {
+							std::swap(left, right);
+							fill_partial_stencil_fast_fn(x,y,z,middle);
+							fill_partial_stencil_fast_fn(x+1,y,z,right);					
+						}
+						else if (stale_stencil >= 3) {
+							fill_partial_stencil_fast_fn(x-1,y,z,left);
+							fill_partial_stencil_fast_fn(x,y,z,middle);
+							fill_partial_stencil_fast_fn(x+1,y,z,right);
+						}
 					}
-					else if (stale_stencil == 2) {
-						left = right;
-						fill_partial_stencil_fn(x,y,z,middle);
-						fill_partial_stencil_fn(x+1,y,z,right);
-						stale_stencil = 0;					
+					else {
+						if (stale_stencil == 1) {
+							advance_stencil(x-1,y,z);
+						}
+						else if (stale_stencil == 2) {
+							std::swap(left, right);
+							fill_partial_stencil_fn(x,y,z,middle);
+							fill_partial_stencil_fn(x+1,y,z,right);					
+						}
+						else if (stale_stencil >= 3) {
+							fill_partial_stencil_fn(x-1,y,z,left);
+							fill_partial_stencil_fn(x,y,z,middle);
+							fill_partial_stencil_fn(x+1,y,z,right);
+						}
 					}
-					else if (stale_stencil >= 3) {
-						fill_partial_stencil_fn(x-1,y,z,left);
-						fill_partial_stencil_fn(x,y,z,middle);
-						fill_partial_stencil_fn(x+1,y,z,right);
-						stale_stencil = 0;
-					}
+
+					stale_stencil = 0;
 
 					if (left.size() + middle.size() + right.size() == 0) {
 						stale_stencil = 1;
