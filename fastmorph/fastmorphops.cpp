@@ -193,8 +193,9 @@ py::array dilate_helper(
 					std::sort(middle.begin(), middle.end());
 					std::sort(right.begin(), right.end());
 
-					if (right.size() == 9 && right[0] == right[8]
-						&& middle.size() == 9 && middle[0] == middle[8]
+					if ((right.size() + middle.size() >= 14)
+						&& right[0] == right[right.size() - 1]
+						&& middle[0] == middle[middle.size() - 1]
 						&& right[0] == middle[0]) {
 
 						output[loc] = right[0];
