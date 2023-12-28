@@ -93,11 +93,17 @@ py::array dilate_helper(
 		// 3x3 sets of labels, as index advances 
 		// right is leading edge, middle becomes left, 
 		// left gets deleted
-		std::vector<LABEL> left, middle, right;
+		std::vector<LABEL> left, middle, right, tmp;
+		left.reserve(9);
+		middle.reserve(9);
+		right.reserve(9);
+		tmp.reserve(9);
 
 		auto advance_stencil = [&](uint64_t x, uint64_t y, uint64_t z) {
-			left = middle;
-			middle = right;
+			tmp = std::move(left);
+			left = std::move(middle);
+			middle = std::move(right);
+			right = std::move(tmp);
 			fill_partial_stencil_fn(x+2,y,z,right);
 		};
 
@@ -137,7 +143,7 @@ py::array dilate_helper(
 					}
 
 					if (left.size() + middle.size() + right.size() == 0) {
-						advance_stencil(x,y,z);
+						stale_stencil = 1;
 						continue;
 					} 
 
