@@ -197,10 +197,9 @@ py::array dilate_helper(
 						&& middle.size() == 9 && middle[0] == middle[8]
 						&& right[0] == middle[0]) {
 
-
-						output[loc] = neighbors[0];
+						output[loc] = right[0];
 						if (x < sx - 1) {
-							output[loc+1] = neighbors[0];
+							output[loc+1] = right[0];
 							stale_stencil = 2;
 							x++;
 						}
