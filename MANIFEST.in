@@ -1,3 +1,4 @@
 include fastmorph/threadpool.h
+include fastmorph/fastmorph.hpp
 include fastmorph/fastmorphops.cpp
 include LICENSE
