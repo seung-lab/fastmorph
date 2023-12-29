@@ -72,37 +72,55 @@ filled_labels, ct = fastmorph.fill_holes(labels, return_fill_count=True, remove_
 A test run on an M1 Macbook Pro on `connectomics.npy.ckl`, a 512<sup>3</sup> volume with over 2000 dense labels had the following results.
 
 ```
-erode / 1 thread: 1.977 sec
-erode / 2 threads: 1.104 sec
-erode / 4 threads: 0.831 sec
-dilate / background_only=True / 1 thread: 1.078 sec
-dilate / background_only=True / 2 threads: 0.637 sec
-dilate / background_only=True / 4 threads: 0.456 sec
-dilate / background_only=False / 1 thread: 14.597 sec
-dilate / background_only=False / 2 threads: 7.394 sec
-dilate / background_only=False / 4 threads: 4.983 sec
-dilate / background_only=False / 8 threads: 4.105 sec
+erode / 1 thread: 1.553 sec
+erode / 2 threads: 0.885 sec
+erode / 4 threads: 0.651 sec
+dilate / background_only=True / 1 thread: 1.100 sec
+dilate / background_only=True / 2 threads: 0.632 sec
+dilate / background_only=True / 4 threads: 0.441 sec
+dilate / background_only=False / 1 thread: 11.783 sec
+dilate / background_only=False / 2 threads: 5.944 sec
+dilate / background_only=False / 4 threads: 4.291 sec
+dilate / background_only=False / 8 threads: 3.298 sec
 scipy grey_dilation / 1 thread 14.648 sec
 scipy grey_erode / 1 thread: 14.412 sec
 skimage expand_labels / 1 thread: 62.248 sec
+```
+
+Test run on an M1 Macbook Pro with `ws.npy.ckl` a 512<sup>3</sup> volume with tens of thousands of components.
+
+```
+erode / 1 thread: 2.380 sec
+erode / 2 threads: 1.479 sec
+erode / 4 threads: 1.164 sec
+dilate / background_only=True / 1 thread: 1.598 sec
+dilate / background_only=True / 2 threads: 1.011 sec
+dilate / background_only=True / 4 threads: 0.805 sec
+dilate / background_only=False / 1 thread: 25.182 sec
+dilate / background_only=False / 2 threads: 13.513 sec
+dilate / background_only=False / 4 threads: 8.749 sec
+dilate / background_only=False / 8 threads: 6.640 sec
+scipy grey_dilation / 1 thread 21.109 sec
+scipy grey_erode / 1 thread: 20.305 sec
+skimage expand_labels / 1 thread: 63.247 sec
 ```
 
 Here is the performance on a completely zeroed 512<sup>3</sup> volume:
 
 ```
 erode / 1 thread: 0.462 sec
-erode / 2 threads: 0.270 sec
-erode / 4 threads: 0.245 sec
-dilate / background_only=True / 1 thread: 4.752 sec
-dilate / background_only=True / 2 threads: 2.530 sec
-dilate / background_only=True / 4 threads: 1.717 sec
-dilate / background_only=False / 1 thread: 4.572 sec
-dilate / background_only=False / 2 threads: 2.419 sec
-dilate / background_only=False / 4 threads: 1.493 sec
-dilate / background_only=False / 8 threads: 1.201 sec
-scipy grey_dilation / 1 thread 10.508 sec
-scipy grey_erode / 1 thread: 10.650 sec
-skimage expand_labels / 1 thread: 33.353 sec
+erode / 2 threads: 0.289 sec
+erode / 4 threads: 0.229 sec
+dilate / background_only=True / 1 thread: 2.337 sec
+dilate / background_only=True / 2 threads: 1.344 sec
+dilate / background_only=True / 4 threads: 1.021 sec
+dilate / background_only=False / 1 thread: 2.267 sec
+dilate / background_only=False / 2 threads: 1.251 sec
+dilate / background_only=False / 4 threads: 0.944 sec
+dilate / background_only=False / 8 threads: 0.718 sec
+scipy grey_dilation / 1 thread 13.516 sec
+scipy grey_erode / 1 thread: 13.326 sec
+skimage expand_labels / 1 thread: 35.243 sec
 ```
 
 ### Memory Profiles
