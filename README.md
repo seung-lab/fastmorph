@@ -4,12 +4,12 @@
 
 This is a collection of morphological 3D image operations that are tuned for working with dense 3D labeled images. 
 
-We provide the following multithreaded operations:
+We provide the following multithreaded (except where noted) operations:
 
 - Multi-Label Stenciled Dilation, Erosion, Opening, Closing
 - Multi-Label Spherical Erosion
 - Binary Spherical Dilation, Opening, and Closing
-- Multi-Label Fill Voids
+- Multi-Label Fill Voids (single threaded)
 
 Highlights compared to other libraries:
 
