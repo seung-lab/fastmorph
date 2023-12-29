@@ -413,7 +413,7 @@ py::array erode_helper(
 		return labels[loc];
 	};
 
-	auto is_pure_fast = [&](
+	auto is_pure_fast_z = [&](
 		const uint64_t xi, const uint64_t yi, const uint64_t zi
 	) {
 		const LABEL zero = 0;
@@ -440,6 +440,33 @@ py::array erode_helper(
 		return labels[loc];
 	};
 
+	auto is_pure_fast_y = [&](
+		const uint64_t xi, const uint64_t yi, const uint64_t zi
+	) {
+		const LABEL zero = 0;
+		if (
+			xi < 0 || xi >= sx
+			|| yi < 0 || yi >= sy
+			|| zi < 0 || zi >= sz
+		) {
+			return zero;
+		}
+
+		const uint64_t loc = xi + sx * (yi + sy * zi);
+
+		if (yi < sy - 1 && labels[loc+sx] != labels[loc]) {
+			return zero;
+		}
+		if (yi < sy -1 && zi > 0 && labels[loc+sx-sxy] != labels[loc]) {
+			return zero;
+		}
+		if (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] != labels[loc]) {
+			return zero;
+		}
+
+		return labels[loc];
+	};
+
 	auto process_block = [&](
 		const uint64_t xs, const uint64_t xe, 
 		const uint64_t ys, const uint64_t ye, 
@@ -449,13 +476,39 @@ py::array erode_helper(
 		LABEL pure_middle = 0;
 		LABEL pure_right = 0;
 
-		auto advance_stencil = [&](uint64_t x, uint64_t y, uint64_t z) {
-			pure_left = pure_middle;
-			pure_middle = pure_right;
-			pure_right = is_pure(x+2,y,z);
-		};
-
 		int stale_stencil = 3;
+
+#define FILL_STENCIL(is_pure_fn) \
+	if (stale_stencil == 1) {\
+		pure_left = pure_middle;\
+		pure_middle = pure_right;\
+		pure_right = is_pure_fn(x+1,y,z);\
+	}\
+	else if (stale_stencil == 2) {\
+		pure_left = pure_right;\
+		pure_right = is_pure_fn(x+1,y,z);\
+		if (!pure_right) {\
+			x += 2;\
+			stale_stencil = 3;\
+			continue;\
+		}\
+		pure_middle = is_pure_fn(x,y,z);\
+	}\
+	else if (stale_stencil >= 3) {\
+		pure_right = is_pure_fn(x+1,y,z);\
+		if (!pure_right) {\
+			x += 2;\
+			stale_stencil = 3;\
+			continue;\
+		}\
+		pure_middle = is_pure_fn(x,y,z);\
+		if (!pure_middle) {\
+			x++;\
+			stale_stencil = 2;\
+			continue;\
+		}\
+		pure_left = is_pure_fn(x-1,y,z);\
+	}
 
 		for (uint64_t z = zs; z < ze; z++) {
 			for (uint64_t y = ys; y < ye; y++) {
@@ -470,66 +523,13 @@ py::array erode_helper(
 					}
 
 					if (z > zs && output[loc-sxy] == labels[loc]) {
-						if (stale_stencil == 1) {
-							pure_left = pure_middle;
-							pure_middle = pure_right;
-							pure_right = is_pure_fast(x+1,y,z);
-						}
-						else if (stale_stencil == 2) {
-							pure_left = pure_right;
-							pure_right = is_pure_fast(x+1,y,z);
-							if (!pure_right) {
-								x += 2;
-								stale_stencil = 3;
-								continue;
-							}
-							pure_middle = is_pure_fast(x,y,z);
-						}
-						else if (stale_stencil >= 3) {
-							pure_right = is_pure_fast(x+1,y,z);
-							if (!pure_right) {
-								x += 2;
-								stale_stencil = 3;
-								continue;
-							}
-							pure_middle = is_pure_fast(x,y,z);
-							if (!pure_middle) {
-								x++;
-								stale_stencil = 2;
-								continue;
-							}
-							pure_left = is_pure_fast(x-1,y,z);
-						}
+						FILL_STENCIL(is_pure_fast_z)
+					}
+					else if (y > ys && output[loc-sx] == labels[loc]) {
+						FILL_STENCIL(is_pure_fast_y)
 					}
 					else {
-						if (stale_stencil == 1) {
-							advance_stencil(x-1,y,z);
-						}
-						else if (stale_stencil == 2) {
-							pure_left = pure_right;
-							pure_right = is_pure(x+1,y,z);
-							if (!pure_right) {
-								x += 2;
-								stale_stencil = 3;
-								continue;
-							}
-							pure_middle = is_pure(x,y,z);					
-						}
-						else if (stale_stencil >= 3) {
-							pure_right = is_pure(x+1,y,z);
-							if (!pure_right) {
-								x += 2;
-								stale_stencil = 3;
-								continue;
-							}
-							pure_middle = is_pure(x,y,z);
-							if (!pure_middle) {
-								x++;
-								stale_stencil = 2;
-								continue;
-							}
-							pure_left = is_pure(x-1,y,z);
-						}
+						FILL_STENCIL(is_pure)
 					}
 					
 					stale_stencil = 0;
@@ -553,6 +553,8 @@ py::array erode_helper(
 			}
 		}
 	};
+
+#undef FILL_STENCIL
 
 	const uint64_t block_size = 64;
 
