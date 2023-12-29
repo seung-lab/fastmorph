@@ -370,101 +370,47 @@ py::array erode_helper(
 	auto is_pure = [&](
 		const uint64_t xi, const uint64_t yi, const uint64_t zi
 	) {
-		const LABEL zero = 0;
-		if (
-			xi < 0 || xi >= sx
-			|| yi < 0 || yi >= sy
-			|| zi < 0 || zi >= sz
-		) {
-			return zero;
-		}
-
 		const uint64_t loc = xi + sx * (yi + sy * zi);
 
-		if (labels[loc] == 0) {
-			return zero;
-		}
-
-		if (yi > 0 && labels[loc-sx] != labels[loc]) {
-			return zero;
-		}
-		if (yi < sy - 1 && labels[loc+sx] != labels[loc]) {
-			return zero;
-		}
-		if (zi > 0 && labels[loc-sxy] != labels[loc]) {
-			return zero;
-		}
-		if (zi < sz - 1 && labels[loc+sxy] != labels[loc]) {
-			return zero;
-		}
-		if (yi > 0 && zi > 0 && labels[loc-sx-sxy] != labels[loc]) {
-			return zero;
-		}
-		if (yi < sy -1 && zi > 0 && labels[loc+sx-sxy] != labels[loc]) {
-			return zero;
-		}
-		if (yi > 0 && zi < sz - 1 && labels[loc-sx+sxy] != labels[loc]) {
-			return zero;
-		}
-		if (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] != labels[loc]) {
-			return zero;
-		}
-
-		return labels[loc];
+		return static_cast<LABEL>(labels[loc] * (
+			(xi >= 0 && xi < sx)
+			&& (labels[loc] != 0)
+			&& (yi > 0 && labels[loc-sx] == labels[loc])
+			&& (yi < sy - 1 && labels[loc+sx] == labels[loc])
+			&& (zi > 0 && labels[loc-sxy] == labels[loc])
+			&& (zi < sz - 1 && labels[loc+sxy] == labels[loc])
+			&& (yi > 0 && zi > 0 && labels[loc-sx-sxy] == labels[loc])
+			&& (yi < sy -1 && zi > 0 && labels[loc+sx-sxy] == labels[loc])
+			&& (yi > 0 && zi < sz - 1 && labels[loc-sx+sxy] == labels[loc])
+			&& (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] == labels[loc])
+		));
 	};
 
 	auto is_pure_fast_z = [&](
 		const uint64_t xi, const uint64_t yi, const uint64_t zi
 	) {
-		const LABEL zero = 0;
-		if (
-			xi < 0 || xi >= sx
-			|| yi < 0 || yi >= sy
-			|| zi < 0 || zi >= sz
-		) {
-			return zero;
-		}
-
 		const uint64_t loc = xi + sx * (yi + sy * zi);
 
-		if (zi < sz - 1 && labels[loc+sxy] != labels[loc]) {
-			return zero;
-		}
-		if (yi > 0 && zi < sz - 1 && labels[loc-sx+sxy] != labels[loc]) {
-			return zero;
-		}
-		if (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] != labels[loc]) {
-			return zero;
-		}
-
-		return labels[loc];
+		return static_cast<LABEL>(labels[loc] * (
+			(xi >= 0 && xi < sx)
+		 && (zi < sz - 1 && labels[loc+sxy] == labels[loc])
+		 && (yi > 0 && zi < sz - 1 && labels[loc-sx+sxy] == labels[loc])
+		 && (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] == labels[loc])
+		));
 	};
 
 	auto is_pure_fast_y = [&](
 		const uint64_t xi, const uint64_t yi, const uint64_t zi
 	) {
-		const LABEL zero = 0;
-		if (
-			xi < 0 || xi >= sx
-			|| yi < 0 || yi >= sy
-			|| zi < 0 || zi >= sz
-		) {
-			return zero;
-		}
 
 		const uint64_t loc = xi + sx * (yi + sy * zi);
 
-		if (yi < sy - 1 && labels[loc+sx] != labels[loc]) {
-			return zero;
-		}
-		if (yi < sy -1 && zi > 0 && labels[loc+sx-sxy] != labels[loc]) {
-			return zero;
-		}
-		if (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] != labels[loc]) {
-			return zero;
-		}
-
-		return labels[loc];
+		return static_cast<LABEL>(labels[loc] * (
+			    (xi >= 0 && xi < sx)
+			&& (yi < sy - 1 && labels[loc+sx] == labels[loc])
+			&& (yi < sy -1 && zi > 0 && labels[loc+sx-sxy] == labels[loc])
+			&& (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] == labels[loc]))
+		);
 	};
 
 	auto process_block = [&](
@@ -484,16 +430,6 @@ py::array erode_helper(
 		pure_middle = pure_right;\
 		pure_right = is_pure_fn(x+1,y,z);\
 	}\
-	else if (stale_stencil == 2) {\
-		pure_left = pure_right;\
-		pure_right = is_pure_fn(x+1,y,z);\
-		if (!pure_right) {\
-			x += 2;\
-			stale_stencil = 3;\
-			continue;\
-		}\
-		pure_middle = is_pure_fn(x,y,z);\
-	}\
 	else if (stale_stencil >= 3) {\
 		pure_right = is_pure_fn(x+1,y,z);\
 		if (!pure_right) {\
@@ -508,6 +444,16 @@ py::array erode_helper(
 			continue;\
 		}\
 		pure_left = is_pure_fn(x-1,y,z);\
+	}\
+	else if (stale_stencil == 2) {\
+		pure_left = pure_right;\
+		pure_right = is_pure_fn(x+1,y,z);\
+		if (!pure_right) {\
+			x += 2;\
+			stale_stencil = 3;\
+			continue;\
+		}\
+		pure_middle = is_pure_fn(x,y,z);\
 	}
 
 		for (uint64_t z = zs; z < ze; z++) {
