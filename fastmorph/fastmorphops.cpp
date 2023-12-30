@@ -112,6 +112,42 @@ py::array multilabel_erode(const py::array &labels, const uint64_t threads) {
 #undef ERODE_HELPER
 }
 
+// assumes fortran order
+py::array grey_dilate(const py::array &labels, const uint64_t threads) {
+	int width = labels.dtype().itemsize();
+
+	const uint64_t sx = labels.shape()[0];
+	const uint64_t sy = labels.shape()[1];
+	const uint64_t sz = labels.shape()[2];
+
+	void* labels_ptr = const_cast<void*>(labels.data());
+	uint8_t* output_ptr = new uint8_t[sx * sy * sz * width]();
+
+	py::array output;
+
+#define GREY_DILATE_HELPER(int_t)\
+	fastmorph::grey_dilate(\
+		reinterpret_cast<int_t*>(labels_ptr),\
+		reinterpret_cast<int_t*>(output_ptr),\
+		sx, sy, sz,\
+		threads\
+	);\
+	return to_numpy(reinterpret_cast<int_t*>(output_ptr), sx, sy, sz);
+
+	if (width == 1) {
+		GREY_DILATE_HELPER(uint8_t)
+	}
+	else if (width == 2) {
+		GREY_DILATE_HELPER(uint16_t)
+	}
+	else if (width == 4) {
+		GREY_DILATE_HELPER(uint32_t)
+	}
+	else {
+		GREY_DILATE_HELPER(uint64_t)
+	}
+#undef GREY_DILATE_HELPER
+}
 
 // assumes fortran order
 py::array grey_erode(const py::array &labels, const uint64_t threads) {
@@ -152,7 +188,8 @@ py::array grey_erode(const py::array &labels, const uint64_t threads) {
 
 PYBIND11_MODULE(fastmorphops, m) {
 	m.doc() = "Accelerated fastmorph functions."; 
-	m.def("dilate", &dilate, "Morphological dilation of a multilabel volume using a 3x3x3 structuring element.");
-	m.def("multilabel_erode", &multilabel_erode, "Morphological erosion of a multilabel volume using mode of a 3x3x3 structuring element.");
+	m.def("multilabel_dilate", &multilabel_dilate, "Morphological dilation of a multilabel volume using mode of a 3x3x3 structuring element.");
+	m.def("grey_dilate", &grey_dilate, "Morphological dilation of a grayscale volume using max of a 3x3x3 structuring element.");
+	m.def("multilabel_erode", &multilabel_erode, "Morphological erosion of a multilabel volume using edge contacts of a 3x3x3 structuring element.");
 	m.def("grey_erode", &grey_erode, "Morphological erosion of a grayscale volume using min of a 3x3x3 structuring element.");
 }
