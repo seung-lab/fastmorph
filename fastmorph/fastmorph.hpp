@@ -10,7 +10,7 @@ namespace fastmorph {
 
 
 template <typename LABEL>
-void dilate(
+void multilabel_dilate(
 	LABEL* labels, LABEL* output,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
 	const bool background_only, const uint64_t threads = 1
@@ -279,7 +279,7 @@ void dilate(
 }
 
 template <typename LABEL>
-void erode(
+void multilabel_erode(
 	LABEL* labels, LABEL* output,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
 	const uint64_t threads

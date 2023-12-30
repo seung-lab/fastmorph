@@ -51,7 +51,7 @@ py::array dilate(
 	py::array output;
 
 #define DILATE_HELPER(uintx_t)\
-	fastmorph::dilate(\
+	fastmorph::multilabel_dilate(\
 			reinterpret_cast<uintx_t*>(labels_ptr),\
 			reinterpret_cast<uintx_t*>(output_ptr),\
 			sx, sy, sz,\
@@ -89,7 +89,7 @@ py::array erode(const py::array &labels, const uint64_t threads) {
 	py::array output;
 
 #define ERODE_HELPER(uintx_t)\
-	fastmorph::erode(\
+	fastmorph::multilabel_erode(\
 		reinterpret_cast<uintx_t*>(labels_ptr),\
 		reinterpret_cast<uintx_t*>(output_ptr),\
 		sx, sy, sz,\
