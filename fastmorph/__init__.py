@@ -43,7 +43,10 @@ def dilate(
   labels = np.asfortranarray(labels)
   while labels.ndim < 3:
     labels = labels[..., np.newaxis]
-  output = fastmorphops.dilate(labels, background_only, parallel)
+  if mode == Mode.multilabel:
+    output = fastmorphops.multilabel_dilate(labels, background_only, parallel)
+  else:
+    output = fastmorphops.grey_dilate(labels, parallel)
   return output.view(labels.dtype)
 
 def erode(
@@ -76,6 +79,7 @@ def opening(
   labels:np.ndarray, 
   background_only:bool = True,
   parallel:int = 1,
+  mode:Mode = Mode.multilabel,
 ) -> np.ndarray:
   """Performs morphological opening of labels.
 
@@ -84,11 +88,12 @@ def opening(
     False: Allow labels to erode each other as they grow.
   parallel: how many pthreads to use in a threadpool
   """
-  return dilate(erode(labels, parallel), background_only, parallel)
+  return dilate(erode(labels, parallel, mode), background_only, parallel, mode)
 
 def closing(
   labels:np.ndarray, 
   background_only:bool = True,
+  mode:Mode = Mode.multilabel,
 ) -> np.ndarray:
   """Performs morphological closing of labels.
 
@@ -97,7 +102,7 @@ def closing(
     False: Allow labels to erode each other as they grow.
   parallel: how many pthreads to use in a threadpool
   """
-  return erode(dilate(labels, background_only, parallel), parallel)
+  return erode(dilate(labels, background_only, parallel, mode), parallel, mode)
 
 def spherical_dilate(
   labels:np.ndarray, 
