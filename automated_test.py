@@ -147,9 +147,12 @@ def test_multilabel_erode():
 	out = fastmorph.erode(labels)
 	assert np.sum(out) == 27
 
-
-def test_grey_erode():
-	labels = np.arange(27, dtype=int).reshape((3,3,3), order="F")
+@pytest.mark.parametrize('dtype', [
+	np.uint8,np.uint16,np.uint32,np.uint64,
+	np.int8,np.int16,np.int32,np.int64,
+])
+def test_grey_erode(dtype):
+	labels = np.arange(27, dtype=dtype).reshape((3,3,3), order="F")
 	out = fastmorph.erode(labels, mode=fastmorph.Mode.grey)
 
 	ans = np.array([
@@ -168,7 +171,7 @@ def test_grey_erode():
 			[9, 9, 10],
 			[12, 12, 13],
 		],
-	]).T
+	], dtype=dtype).T
 
 	assert np.all(out == ans)
 
