@@ -77,7 +77,7 @@ def test_spherical_close():
 	assert res[5,5,5] == True
 
 
-def test_dilate():
+def test_multilabel_dilate():
 	labels = np.zeros((3,3,3), dtype=bool)
 
 	out = fastmorph.dilate(labels)
@@ -117,7 +117,7 @@ def test_dilate():
 	assert np.all(ans == out)
 
 
-def test_erode():
+def test_multilabel_erode():
 	labels = np.ones((3,3,3), dtype=bool)
 	out = fastmorph.erode(labels)
 	assert np.sum(out) == 1 and out[1,1,1] == True
@@ -146,6 +146,34 @@ def test_erode():
 	labels = np.ones((5,5,5), dtype=bool)
 	out = fastmorph.erode(labels)
 	assert np.sum(out) == 27
+
+
+def test_grey_erode():
+	labels = np.arange(27, dtype=int).reshape((3,3,3), order="F")
+	out = fastmorph.erode(labels, mode=fastmorph.Mode.grey)
+
+	ans = np.array([
+		[
+			[0, 0, 1],
+			[0, 0, 1],
+			[3, 3, 4],
+		],
+		[
+			[0, 0, 1],
+			[0, 0, 1],
+			[3, 3, 4],
+		],
+		[
+			[9, 9, 10],
+			[9, 9, 10],
+			[12, 12, 13],
+		],
+	]).T
+
+	assert np.all(out == ans)
+
+	out = fastmorph.erode(out, mode=fastmorph.Mode.grey)
+	assert np.all(out == 0)
 
 
 
