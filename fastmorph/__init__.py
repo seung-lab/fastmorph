@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Optional, Sequence
 import numpy as np
 import edt
@@ -10,10 +11,15 @@ import fastmorphops
 
 AnisotropyType = Optional[Sequence[int]]
 
+class Mode(Enum):
+  multilabel = 1
+  grey = 2
+
 def dilate(
   labels:np.ndarray,
   background_only:bool = True,
   parallel:int = 1,
+  mode:Mode = Mode.multilabel,
 ) -> np.ndarray:
   """
   Dilate forground labels using a 3x3x3 stencil with
@@ -37,10 +43,17 @@ def dilate(
   labels = np.asfortranarray(labels)
   while labels.ndim < 3:
     labels = labels[..., np.newaxis]
-  output = fastmorphops.dilate(labels, background_only, parallel)
+  if mode == Mode.multilabel:
+    output = fastmorphops.multilabel_dilate(labels, background_only, parallel)
+  else:
+    output = fastmorphops.grey_dilate(labels, parallel)
   return output.view(labels.dtype)
 
-def erode(labels:np.ndarray, parallel:int = 1) -> np.ndarray:
+def erode(
+  labels:np.ndarray, 
+  parallel:int = 1,
+  mode:Mode = Mode.multilabel,
+) -> np.ndarray:
   """
   Erodes forground labels using a 3x3x3 stencil with
   all elements "on".
@@ -55,13 +68,18 @@ def erode(labels:np.ndarray, parallel:int = 1) -> np.ndarray:
   labels = np.asfortranarray(labels)
   while labels.ndim < 3:
     labels = labels[..., np.newaxis]
-  output = fastmorphops.erode(labels, parallel)
+
+  if mode == Mode.multilabel:
+    output = fastmorphops.multilabel_erode(labels, parallel)
+  else:
+    output = fastmorphops.grey_erode(labels, parallel)
   return output.view(labels.dtype)
 
 def opening(
   labels:np.ndarray, 
   background_only:bool = True,
   parallel:int = 1,
+  mode:Mode = Mode.multilabel,
 ) -> np.ndarray:
   """Performs morphological opening of labels.
 
@@ -70,11 +88,12 @@ def opening(
     False: Allow labels to erode each other as they grow.
   parallel: how many pthreads to use in a threadpool
   """
-  return dilate(erode(labels, parallel), background_only, parallel)
+  return dilate(erode(labels, parallel, mode), background_only, parallel, mode)
 
 def closing(
   labels:np.ndarray, 
   background_only:bool = True,
+  mode:Mode = Mode.multilabel,
 ) -> np.ndarray:
   """Performs morphological closing of labels.
 
@@ -83,7 +102,7 @@ def closing(
     False: Allow labels to erode each other as they grow.
   parallel: how many pthreads to use in a threadpool
   """
-  return erode(dilate(labels, background_only, parallel), parallel)
+  return erode(dilate(labels, background_only, parallel, mode), parallel, mode)
 
 def spherical_dilate(
   labels:np.ndarray, 
