@@ -455,7 +455,7 @@ template <typename LABEL>
 void grey_dilate(
 	LABEL* labels, LABEL* output,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
-	const bool background_only, const uint64_t threads = 1
+	const uint64_t threads = 1
 ) {
 	// assume a 3x3x3 stencil with all voxels on
 	const uint64_t sxy = sx * sy;
