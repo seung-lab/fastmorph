@@ -151,7 +151,8 @@ py::array grey_dilate(const py::array &labels, const uint64_t threads) {
 
 // assumes fortran order
 py::array grey_erode(const py::array &labels, const uint64_t threads) {
-	int width = labels.dtype().itemsize();
+	py::dtype dt = labels.dtype();
+	int width = dt.itemsize();
 
 	const uint64_t sx = labels.shape()[0];
 	const uint64_t sy = labels.shape()[1];
@@ -171,17 +172,33 @@ py::array grey_erode(const py::array &labels, const uint64_t threads) {
 	);\
 	return to_numpy(reinterpret_cast<int_t*>(output_ptr), sx, sy, sz);
 
-	if (width == 1) {
-		GREY_ERODE_HELPER(uint8_t)
-	}
-	else if (width == 2) {
-		GREY_ERODE_HELPER(uint16_t)
-	}
-	else if (width == 4) {
-		GREY_ERODE_HELPER(uint32_t)
+	if (dt.kind() == 'i') {
+		if (width == 1) {
+			GREY_ERODE_HELPER(int8_t)
+		}
+		else if (width == 2) {
+			GREY_ERODE_HELPER(int16_t)
+		}
+		else if (width == 4) {
+			GREY_ERODE_HELPER(int32_t)
+		}
+		else {
+			GREY_ERODE_HELPER(int64_t)
+		}
 	}
 	else {
-		GREY_ERODE_HELPER(uint64_t)
+		if (width == 1) {
+			GREY_ERODE_HELPER(uint8_t)
+		}
+		else if (width == 2) {
+			GREY_ERODE_HELPER(uint16_t)
+		}
+		else if (width == 4) {
+			GREY_ERODE_HELPER(uint32_t)
+		}
+		else {
+			GREY_ERODE_HELPER(uint64_t)
+		}
 	}
 #undef GREY_ERODE_HELPER
 }
