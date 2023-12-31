@@ -175,12 +175,15 @@ def test_grey_erode():
 	out = fastmorph.erode(out, mode=fastmorph.Mode.grey)
 	assert np.all(out == 0)
 
+@pytest.mark.parametrize('dtype', [
+	np.uint8,np.uint16,np.uint32,np.uint64,
+	np.int8,np.int16,np.int32,np.int64,
+])
+def test_grey_dilate(dtype):
+	L = 5
+	H = 10
 
-def test_grey_dilate():
-	L = 100
-	H = 200
-
-	labels = np.zeros((3,3,3), dtype=int)
+	labels = np.zeros((3,3,3), dtype=dtype)
 	labels[0,0,0] = L
 	labels[2,2,2] = H
 
@@ -202,11 +205,18 @@ def test_grey_dilate():
 			[0, H, H],
 			[0, H, H],
 		],
-	]).T
+	], dtype=dtype).T
 
 	assert np.all(out == ans)
 
 	out = fastmorph.dilate(out, mode=fastmorph.Mode.grey)
 	assert np.all(out == H)
+
+def test_grey_dilate_bool():
+	labels = np.zeros((3,3,3), dtype=bool)
+	labels[1,1,1] = True
+
+	out = fastmorph.dilate(labels, mode=fastmorph.Mode.grey)
+	assert np.all(out == True)
 
 
