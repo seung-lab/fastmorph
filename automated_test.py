@@ -176,4 +176,37 @@ def test_grey_erode():
 	assert np.all(out == 0)
 
 
+def test_grey_dilate():
+	L = 100
+	H = 200
+
+	labels = np.zeros((3,3,3), dtype=int)
+	labels[0,0,0] = L
+	labels[2,2,2] = H
+
+	out = fastmorph.dilate(labels, mode=fastmorph.Mode.grey)
+
+	ans = np.array([
+		[
+			[L, L, 0],
+			[L, L, 0],
+			[0, 0, 0],
+		],
+		[
+			[L, L, 0],
+			[L, H, H],
+			[0, H, H],
+		],
+		[
+			[0, 0, 0],
+			[0, H, H],
+			[0, H, H],
+		],
+	]).T
+
+	assert np.all(out == ans)
+
+	out = fastmorph.dilate(out, mode=fastmorph.Mode.grey)
+	assert np.all(out == H)
+
 
