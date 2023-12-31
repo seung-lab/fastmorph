@@ -33,13 +33,48 @@ py::array to_numpy(
 	);
 }
 
+#define DISPATCH_TO_TYPES(FUNCTION_MACRO)\
+	if (dt.kind() == 'i') {\
+		if (width == 1) {\
+			FUNCTION_MACRO(int8_t)\
+		}\
+		else if (width == 2) {\
+			FUNCTION_MACRO(int16_t)\
+		}\
+		else if (width == 4) {\
+			FUNCTION_MACRO(int32_t)\
+		}\
+		else {\
+			FUNCTION_MACRO(int64_t)\
+		}\
+	}\
+	else if (dt.kind() == 'b') {\
+		FUNCTION_MACRO(uint8_t)\
+	}\
+	else {\
+		if (width == 1) {\
+			FUNCTION_MACRO(uint8_t)\
+		}\
+		else if (width == 2) {\
+			FUNCTION_MACRO(uint16_t)\
+		}\
+		else if (width == 4) {\
+			FUNCTION_MACRO(uint32_t)\
+		}\
+		else {\
+			FUNCTION_MACRO(uint64_t)\
+		}\
+	}
+
+
 // assumes fortran order
 py::array multilabel_dilate(
 	const py::array &labels, 
 	const bool background_only, 
 	const int threads
 ) {
-	int width = labels.dtype().itemsize();
+	py::dtype dt = labels.dtype();
+	int width = dt.itemsize();
 
 	const uint64_t sx = labels.shape()[0];
 	const uint64_t sy = labels.shape()[1];
@@ -59,25 +94,17 @@ py::array multilabel_dilate(
 		);\
 		return to_numpy(reinterpret_cast<uintx_t*>(output_ptr), sx, sy, sz);
 
-	if (width == 1) {
-		DILATE_HELPER(uint8_t)
-	}
-	else if (width == 2) {
-		DILATE_HELPER(uint16_t)
-	}
-	else if (width == 4) {
-		DILATE_HELPER(uint32_t)
-	}
-	else {
-		DILATE_HELPER(uint64_t)
-	}
+
+	DISPATCH_TO_TYPES(DILATE_HELPER)
+
 
 #undef DILATE_HELPER
 }
 
 // assumes fortran order
 py::array multilabel_erode(const py::array &labels, const uint64_t threads) {
-	int width = labels.dtype().itemsize();
+	py::dtype dt = labels.dtype();
+	int width = dt.itemsize();
 
 	const uint64_t sx = labels.shape()[0];
 	const uint64_t sy = labels.shape()[1];
@@ -97,18 +124,8 @@ py::array multilabel_erode(const py::array &labels, const uint64_t threads) {
 	);\
 	return to_numpy(reinterpret_cast<uintx_t*>(output_ptr), sx, sy, sz);
 
-	if (width == 1) {
-		ERODE_HELPER(uint8_t)
-	}
-	else if (width == 2) {
-		ERODE_HELPER(uint16_t)
-	}
-	else if (width == 4) {
-		ERODE_HELPER(uint32_t)
-	}
-	else {
-		ERODE_HELPER(uint64_t)
-	}
+	DISPATCH_TO_TYPES(ERODE_HELPER)
+
 #undef ERODE_HELPER
 }
 
@@ -135,37 +152,8 @@ py::array grey_dilate(const py::array &labels, const uint64_t threads) {
 	);\
 	return to_numpy(reinterpret_cast<int_t*>(output_ptr), sx, sy, sz);
 
-	if (dt.kind() == 'i') {
-		if (width == 1) {
-			GREY_DILATE_HELPER(int8_t)
-		}
-		else if (width == 2) {
-			GREY_DILATE_HELPER(int16_t)
-		}
-		else if (width == 4) {
-			GREY_DILATE_HELPER(int32_t)
-		}
-		else {
-			GREY_DILATE_HELPER(int64_t)
-		}
-	}
-	else if (dt.kind() == 'b') {
-		GREY_DILATE_HELPER(uint8_t)
-	}
-	else {
-		if (width == 1) {
-			GREY_DILATE_HELPER(uint8_t)
-		}
-		else if (width == 2) {
-			GREY_DILATE_HELPER(uint16_t)
-		}
-		else if (width == 4) {
-			GREY_DILATE_HELPER(uint32_t)
-		}
-		else {
-			GREY_DILATE_HELPER(uint64_t)
-		}
-	}
+	DISPATCH_TO_TYPES(GREY_DILATE_HELPER)
+
 #undef GREY_DILATE_HELPER
 }
 
@@ -192,39 +180,12 @@ py::array grey_erode(const py::array &labels, const uint64_t threads) {
 	);\
 	return to_numpy(reinterpret_cast<int_t*>(output_ptr), sx, sy, sz);
 
-	if (dt.kind() == 'i') {
-		if (width == 1) {
-			GREY_ERODE_HELPER(int8_t)
-		}
-		else if (width == 2) {
-			GREY_ERODE_HELPER(int16_t)
-		}
-		else if (width == 4) {
-			GREY_ERODE_HELPER(int32_t)
-		}
-		else {
-			GREY_ERODE_HELPER(int64_t)
-		}
-	}
-	else if (dt.kind() == 'b') {
-		GREY_ERODE_HELPER(uint8_t)
-	}
-	else {
-		if (width == 1) {
-			GREY_ERODE_HELPER(uint8_t)
-		}
-		else if (width == 2) {
-			GREY_ERODE_HELPER(uint16_t)
-		}
-		else if (width == 4) {
-			GREY_ERODE_HELPER(uint32_t)
-		}
-		else {
-			GREY_ERODE_HELPER(uint64_t)
-		}
-	}
+	DISPATCH_TO_TYPES(GREY_ERODE_HELPER)
+
 #undef GREY_ERODE_HELPER
 }
+
+#undef DISPATCH_TO_TYPES
 
 PYBIND11_MODULE(fastmorphops, m) {
 	m.doc() = "Accelerated fastmorph functions."; 
