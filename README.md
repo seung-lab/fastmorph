@@ -7,6 +7,7 @@ This is a collection of morphological 3D image operations that are tuned for wor
 We provide the following multithreaded (except where noted) operations:
 
 - Multi-Label Stenciled Dilation, Erosion, Opening, Closing
+- Grayscale Stenciled Dilation, Erosion, Opening, Closing
 - Multi-Label Spherical Erosion
 - Binary Spherical Dilation, Opening, and Closing
 - Multi-Label Fill Voids (single threaded)
@@ -21,7 +22,6 @@ Highlights compared to other libraries:
 
 Disadvantages versus other libraries:
 
-- Not ideal for grayscale images
 - Stencil (structuring element) is fixed size 3x3x3 and all on.
 
 
