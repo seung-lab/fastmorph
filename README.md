@@ -45,6 +45,12 @@ morphed = fastmorph.erode(labels)
 morphed = fastmorph.opening(labels, parallel=2)
 morphed = fastmorph.closing(labels, parallel=2)
 
+# You can select grayscale dilation, erosion, opening, and 
+# closing by passing in a different Mode enum.
+# The options are Mode.grey and Mode.multilabel
+morphed = fastmorph.dilate(labels, mode=fastmorph.Mode.grey)
+morphed = fastmorph.erode(labels, mode=fastmorph.Mode.grey)
+
 # Dilate only supports binary images at this time.
 # Radius is specified in physical units, but
 # by default anisotropy = (1,1,1) so it is the 
@@ -69,7 +75,7 @@ filled_labels, ct = fastmorph.fill_holes(labels, return_fill_count=True, remove_
 
 ## Performance
 
-A test run on an M1 Macbook Pro on `connectomics.npy.ckl`, a 512<sup>3</sup> volume with over 2000 dense labels had the following results.
+A test run on an M1 Macbook Pro on `connectomics.npy.ckl`, a 512<sup>3</sup> volume with over 2000 dense labels had the following results for multilabel processing.
 
 ```
 erode / 1 thread: 1.553 sec
@@ -87,7 +93,7 @@ scipy grey_erode / 1 thread: 14.412 sec
 skimage expand_labels / 1 thread: 62.248 sec
 ```
 
-Test run on an M1 Macbook Pro with `ws.npy.ckl` a 512<sup>3</sup> volume with tens of thousands of components.
+Test run on an M1 Macbook Pro with `ws.npy.ckl` a 512<sup>3</sup> volume with tens of thousands of components for multilabel processing.
 
 ```
 erode / 1 thread: 2.380 sec
@@ -105,7 +111,7 @@ scipy grey_erode / 1 thread: 20.305 sec
 skimage expand_labels / 1 thread: 63.247 sec
 ```
 
-Here is the performance on a completely zeroed 512<sup>3</sup> volume:
+Here is the performance on a completely zeroed 512<sup>3</sup> volume for multilabel processing.
 
 ```
 erode / 1 thread: 0.462 sec
