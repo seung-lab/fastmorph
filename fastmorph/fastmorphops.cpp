@@ -109,7 +109,7 @@ py::array multilabel_dilate(
 	py::array output;
 
 #define DILATE_HELPER_3D(uintx_t)\
-	fastmorph::multilabel_dilate_3d(\
+	fastmorph::multilabel_dilate(\
 			reinterpret_cast<uintx_t*>(labels_ptr),\
 			reinterpret_cast<uintx_t*>(output_ptr),\
 			sx, sy, sz,\
@@ -118,7 +118,7 @@ py::array multilabel_dilate(
 		return to_numpy(reinterpret_cast<uintx_t*>(output_ptr), sx, sy, sz);
 
 #define DILATE_HELPER_2D(uintx_t)\
-	fastmorph::multilabel_dilate_2d(\
+	fastmorph::multilabel_dilate(\
 			reinterpret_cast<uintx_t*>(labels_ptr),\
 			reinterpret_cast<uintx_t*>(output_ptr),\
 			sx, sy,\
@@ -155,7 +155,7 @@ py::array multilabel_erode(const py::array &labels, const uint64_t threads) {
 	py::array output;
 
 #define ERODE_HELPER_3D(uintx_t)\
-	fastmorph::multilabel_erode_3d(\
+	fastmorph::multilabel_erode(\
 		reinterpret_cast<uintx_t*>(labels_ptr),\
 		reinterpret_cast<uintx_t*>(output_ptr),\
 		sx, sy, sz,\
@@ -164,7 +164,7 @@ py::array multilabel_erode(const py::array &labels, const uint64_t threads) {
 	return to_numpy(reinterpret_cast<uintx_t*>(output_ptr), sx, sy, sz);
 
 #define ERODE_HELPER_2D(uintx_t)\
-	fastmorph::multilabel_erode_2d(\
+	fastmorph::multilabel_erode(\
 		reinterpret_cast<uintx_t*>(labels_ptr),\
 		reinterpret_cast<uintx_t*>(output_ptr),\
 		sx, sy,\

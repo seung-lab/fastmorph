@@ -47,10 +47,10 @@ void parallelize_blocks(
 
 
 template <typename LABEL>
-void multilabel_dilate_3d(
+void multilabel_dilate(
 	LABEL* labels, LABEL* output,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
-	const bool background_only, const uint64_t threads = 1
+	const bool background_only, const uint64_t threads
 ) {
 
 	// assume a 3x3x3 stencil with all voxels on
@@ -298,10 +298,10 @@ void multilabel_dilate_3d(
 }
 
 template <typename LABEL>
-void multilabel_dilate_2d(
+void multilabel_dilate(
 	LABEL* labels, LABEL* output,
 	const uint64_t sx, const uint64_t sy,
-	const bool background_only, const uint64_t threads = 1
+	const bool background_only, const uint64_t threads
 ) {
 
 	// assume a 3x3 stencil with all voxels on
@@ -465,7 +465,7 @@ void multilabel_dilate_2d(
 }
 
 template <typename LABEL>
-void multilabel_erode_3d(
+void multilabel_erode(
 	LABEL* labels, LABEL* output,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
 	const uint64_t threads
@@ -619,7 +619,7 @@ void multilabel_erode_3d(
 }
 
 template <typename LABEL>
-void multilabel_erode_2d(
+void multilabel_erode(
 	LABEL* labels, LABEL* output,
 	const uint64_t sx, const uint64_t sy,
 	const uint64_t threads
@@ -722,10 +722,10 @@ void multilabel_erode_2d(
 }
 
 template <typename LABEL>
-void grey_dilate_3d(
+void grey_dilate(
 	LABEL* labels, LABEL* output,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
-	const uint64_t threads = 1
+	const uint64_t threads
 ) {
 	// assume a 3x3x3 stencil with all voxels on
 	const uint64_t sxy = sx * sy;
@@ -860,10 +860,10 @@ void grey_dilate_3d(
 }
 
 template <typename LABEL>
-void grey_dilate_2d(
+void grey_dilate(
 	LABEL* labels, LABEL* output,
 	const uint64_t sx, const uint64_t sy,
-	const uint64_t threads = 1
+	const uint64_t threads
 ) {
 	// assume a 3x3 stencil with all voxels on
 	constexpr LABEL MAX_LABEL = std::numeric_limits<LABEL>::max();
@@ -976,7 +976,7 @@ void grey_dilate_2d(
 
 
 template <typename LABEL>
-void grey_erode_3d(
+void grey_erode(
 	LABEL* labels, LABEL* output,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
 	const uint64_t threads
@@ -1115,7 +1115,7 @@ void grey_erode_3d(
 }
 
 template <typename LABEL>
-void grey_erode_2d(
+void grey_erode(
 	LABEL* labels, LABEL* output,
 	const uint64_t sx, const uint64_t sy,
 	const uint64_t threads
