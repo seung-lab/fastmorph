@@ -41,11 +41,15 @@ def dilate(
   parallel = min(parallel, mp.cpu_count())
 
   labels = np.asfortranarray(labels)
-  while labels.ndim < 3:
+  twoD = labels.ndim <= 2
+  while labels.ndim < 2:
     labels = labels[..., np.newaxis]
+  
   if mode == Mode.multilabel:
     output = fastmorphops.multilabel_dilate(labels, background_only, parallel)
   else:
+    if twoD:
+      raise NotImplementedError("2D grey dilate is not supported yet.")
     output = fastmorphops.grey_dilate(labels, parallel)
   return output.view(labels.dtype)
 
@@ -66,12 +70,15 @@ def erode(
   parallel = min(parallel, mp.cpu_count())
 
   labels = np.asfortranarray(labels)
-  while labels.ndim < 3:
+  twoD = labels.ndim <= 2
+  while labels.ndim < 2:
     labels = labels[..., np.newaxis]
 
   if mode == Mode.multilabel:
     output = fastmorphops.multilabel_erode(labels, parallel)
   else:
+    if twoD:
+      raise NotImplementedError("2D grey erode is not supported yet.")
     output = fastmorphops.grey_erode(labels, parallel)
   return output.view(labels.dtype)
 
