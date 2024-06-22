@@ -93,6 +93,7 @@ def opening(
 def closing(
   labels:np.ndarray, 
   background_only:bool = True,
+  parallel:int = 1,
   mode:Mode = Mode.multilabel,
 ) -> np.ndarray:
   """Performs morphological closing of labels.
