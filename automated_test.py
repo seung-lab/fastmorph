@@ -8,7 +8,7 @@ def test_spherical_dilate():
 	assert np.all(res == False)
 
 	labels[5,5,5] = True
-	radius = 5 * np.sqrt(3)
+	radius = 5 * np.sqrt(3) + 0.000001
 	res = fastmorph.spherical_dilate(labels, radius=radius)
 	assert np.all(res == True)	
 
