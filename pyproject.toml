@@ -3,5 +3,5 @@ requires = [
     "setuptools",
     "wheel",
     "pybind11",
-    "oldest-supported-numpy",
+    "numpy",
 ]
