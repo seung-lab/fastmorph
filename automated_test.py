@@ -220,6 +220,19 @@ def test_multilabel_erode_2d():
 	np.int8,np.int16,np.int32,np.int64,
 ])
 def test_grey_erode(dtype):
+	labels = np.arange(9, dtype=dtype).reshape((3,3), order="F")
+	out = fastmorph.erode(labels, mode=fastmorph.Mode.grey)
+
+	ans = np.array([
+		[0, 0, 1],
+		[0, 0, 1],
+		[3, 3, 4],
+	], dtype=dtype).T
+	assert np.all(out == ans)
+
+	out = fastmorph.erode(out, mode=fastmorph.Mode.grey)
+	assert np.all(out == 0)
+
 	labels = np.arange(27, dtype=dtype).reshape((3,3,3), order="F")
 	out = fastmorph.erode(labels, mode=fastmorph.Mode.grey)
 
@@ -254,6 +267,20 @@ def test_grey_dilate(dtype):
 	L = 5
 	H = 10
 
+	labels = np.zeros((3,3), dtype=dtype)
+	labels[0,0] = L
+	labels[2,2] = H
+
+	out = fastmorph.dilate(labels, mode=fastmorph.Mode.grey)
+
+	ans = np.array([
+		[L, L, 0],
+		[L, H, H],
+		[0, H, H],
+	], dtype=dtype).T
+
+	assert np.all(out == ans)
+
 	labels = np.zeros((3,3,3), dtype=dtype)
 	labels[0,0,0] = L
 	labels[2,2,2] = H
@@ -286,6 +313,12 @@ def test_grey_dilate(dtype):
 def test_grey_dilate_bool():
 	labels = np.zeros((3,3,3), dtype=bool)
 	labels[1,1,1] = True
+
+	out = fastmorph.dilate(labels, mode=fastmorph.Mode.grey)
+	assert np.all(out == True)
+
+	labels = np.zeros((3,3), dtype=bool)
+	labels[1,1] = True
 
 	out = fastmorph.dilate(labels, mode=fastmorph.Mode.grey)
 	assert np.all(out == True)
