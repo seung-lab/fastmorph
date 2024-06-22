@@ -77,7 +77,7 @@ def test_spherical_close():
 	assert res[5,5,5] == True
 
 
-def test_multilabel_dilate():
+def test_multilabel_dilate_3d():
 	labels = np.zeros((3,3,3), dtype=bool)
 
 	out = fastmorph.dilate(labels)
@@ -116,8 +116,46 @@ def test_multilabel_dilate():
 	ans[1:,:,:] = 2
 	assert np.all(ans == out)
 
+def test_multilabel_dilate_2d():
+	labels = np.zeros((3,3), dtype=bool)
 
-def test_multilabel_erode():
+	out = fastmorph.dilate(labels)
+	assert not np.any(out)
+
+	labels[1,1] = True
+
+	out = fastmorph.dilate(labels)
+	assert np.all(out)
+
+	labels = np.zeros((3,3), dtype=bool)
+	labels[0,0] = True
+	out = fastmorph.dilate(labels)
+
+	ans = np.zeros((3,3), dtype=bool)
+	ans[:2,:2] = True
+
+	assert np.all(out == ans)
+
+	labels = np.zeros((3,3), dtype=int)
+	labels[0,1] = 1
+	labels[2,1] = 2
+
+	out = fastmorph.dilate(labels)
+	ans = np.ones((3,3), dtype=int)
+	ans[2,:] = 2
+	assert np.all(ans == out)
+
+	labels = np.zeros((3,3), dtype=int, order="F")
+	labels[0,1] = 1
+	labels[1,1] = 2
+	labels[2,1] = 2
+
+	out = fastmorph.dilate(labels)
+	ans = np.ones((3,3), dtype=int, order="F")
+	ans[1:,:] = 2
+	assert np.all(ans == out)
+
+def test_multilabel_erode_3d():
 	labels = np.ones((3,3,3), dtype=bool)
 	out = fastmorph.erode(labels)
 	assert np.sum(out) == 1 and out[1,1,1] == True
@@ -146,6 +184,36 @@ def test_multilabel_erode():
 	labels = np.ones((5,5,5), dtype=bool)
 	out = fastmorph.erode(labels)
 	assert np.sum(out) == 27
+
+def test_multilabel_erode_2d():
+	labels = np.ones((3,3), dtype=bool)
+	out = fastmorph.erode(labels)
+	assert np.sum(out) == 1 and out[1,1] == True
+
+	out = fastmorph.erode(out)
+	assert not np.any(out)
+
+	out = fastmorph.erode(out)
+	assert not np.any(out)
+
+	labels = np.ones((3,3), dtype=int, order="F")
+	labels[0,:] = 1
+	labels[1,:] = 2
+	labels[2,:] = 3
+
+	out = fastmorph.erode(labels)
+	ans = np.zeros((3,3), dtype=int, order="F")
+
+	assert np.all(ans == out)
+
+	labels = np.zeros((5,5), dtype=bool)
+	labels[1:4,1:4] = True
+	out = fastmorph.erode(labels)
+	assert np.sum(out) == 1 and out[2,2] == True
+
+	labels = np.ones((5,5), dtype=bool)
+	out = fastmorph.erode(labels)
+	assert np.sum(out) == 9
 
 @pytest.mark.parametrize('dtype', [
 	np.uint8,np.uint16,np.uint32,np.uint64,
