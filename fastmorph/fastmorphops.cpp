@@ -190,14 +190,16 @@ py::array grey_dilate(const py::array &labels, const uint64_t threads) {
 
 	const uint64_t sx = labels.shape()[0];
 	const uint64_t sy = labels.shape()[1];
-	const uint64_t sz = labels.shape()[2];
+	const uint64_t sz = labels.ndim() > 2 
+		? labels.shape()[2] 
+		: 1;
 
 	void* labels_ptr = const_cast<void*>(labels.data());
 	uint8_t* output_ptr = new uint8_t[sx * sy * sz * width]();
 
 	py::array output;
 
-#define GREY_DILATE_HELPER(int_t)\
+#define GREY_DILATE_HELPER_3D(int_t)\
 	fastmorph::grey_dilate(\
 		reinterpret_cast<int_t*>(labels_ptr),\
 		reinterpret_cast<int_t*>(output_ptr),\
@@ -206,9 +208,24 @@ py::array grey_dilate(const py::array &labels, const uint64_t threads) {
 	);\
 	return to_numpy(reinterpret_cast<int_t*>(output_ptr), sx, sy, sz);
 
-	DISPATCH_TO_TYPES(GREY_DILATE_HELPER)
+#define GREY_DILATE_HELPER_2D(int_t)\
+	fastmorph::grey_dilate(\
+		reinterpret_cast<int_t*>(labels_ptr),\
+		reinterpret_cast<int_t*>(output_ptr),\
+		sx, sy,\
+		threads\
+	);\
+	return to_numpy(reinterpret_cast<int_t*>(output_ptr), sx, sy);
 
-#undef GREY_DILATE_HELPER
+	if (labels.ndim() > 2) {
+		DISPATCH_TO_TYPES(GREY_DILATE_HELPER_3D)
+	}
+	else {
+		DISPATCH_TO_TYPES(GREY_DILATE_HELPER_2D)
+	}
+
+#undef GREY_DILATE_HELPER_3D
+#undef GREY_DILATE_HELPER_2D
 }
 
 // assumes fortran order
@@ -218,14 +235,16 @@ py::array grey_erode(const py::array &labels, const uint64_t threads) {
 
 	const uint64_t sx = labels.shape()[0];
 	const uint64_t sy = labels.shape()[1];
-	const uint64_t sz = labels.shape()[2];
+	const uint64_t sz = labels.ndim() > 2 
+		? labels.shape()[2] 
+		: 1;
 
 	void* labels_ptr = const_cast<void*>(labels.data());
 	uint8_t* output_ptr = new uint8_t[sx * sy * sz * width]();
 
 	py::array output;
 
-#define GREY_ERODE_HELPER(int_t)\
+#define GREY_ERODE_HELPER_3D(int_t)\
 	fastmorph::grey_erode(\
 		reinterpret_cast<int_t*>(labels_ptr),\
 		reinterpret_cast<int_t*>(output_ptr),\
@@ -234,9 +253,24 @@ py::array grey_erode(const py::array &labels, const uint64_t threads) {
 	);\
 	return to_numpy(reinterpret_cast<int_t*>(output_ptr), sx, sy, sz);
 
-	DISPATCH_TO_TYPES(GREY_ERODE_HELPER)
+#define GREY_ERODE_HELPER_2D(int_t)\
+	fastmorph::grey_erode(\
+		reinterpret_cast<int_t*>(labels_ptr),\
+		reinterpret_cast<int_t*>(output_ptr),\
+		sx, sy,\
+		threads\
+	);\
+	return to_numpy(reinterpret_cast<int_t*>(output_ptr), sx, sy);
 
-#undef GREY_ERODE_HELPER
+	if (labels.ndim() > 2) {
+		DISPATCH_TO_TYPES(GREY_ERODE_HELPER_3D)
+	}
+	else {
+		DISPATCH_TO_TYPES(GREY_ERODE_HELPER_2D)
+	}
+
+#undef GREY_ERODE_HELPER_3D
+#undef GREY_ERODE_HELPER_2D
 }
 
 #undef DISPATCH_TO_TYPES

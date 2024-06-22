@@ -722,7 +722,7 @@ void multilabel_erode_2d(
 }
 
 template <typename LABEL>
-void grey_dilate(
+void grey_dilate_3d(
 	LABEL* labels, LABEL* output,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
 	const uint64_t threads = 1
@@ -860,7 +860,123 @@ void grey_dilate(
 }
 
 template <typename LABEL>
-void grey_erode(
+void grey_dilate_2d(
+	LABEL* labels, LABEL* output,
+	const uint64_t sx, const uint64_t sy,
+	const uint64_t threads = 1
+) {
+	// assume a 3x3 stencil with all voxels on
+	constexpr LABEL MAX_LABEL = std::numeric_limits<LABEL>::max();
+
+	auto get_max = [&](const uint64_t xi, const uint64_t yi) {
+		const uint64_t loc = xi + sx * yi;
+
+		LABEL maxval = std::numeric_limits<LABEL>::min();
+
+		if (xi < 0 || xi >= sx) {
+			return maxval;
+		}
+
+		maxval = std::max(maxval, labels[loc]);
+
+		if (yi > 0) {
+			 maxval = std::max(maxval, labels[loc-sx]);
+		}
+		if (yi < sy - 1) {
+			maxval = std::max(maxval, labels[loc+sx]);
+		}
+
+		return maxval;
+	};
+
+	auto process_block = [&](
+		const uint64_t xs, const uint64_t xe, 
+		const uint64_t ys, const uint64_t ye, 
+		const uint64_t zs, const uint64_t ze
+	){
+		LABEL max_left = MAX_LABEL;
+		LABEL max_middle = MAX_LABEL;
+		LABEL max_right = MAX_LABEL;
+
+		int stale_stencil = 3;
+
+		for (uint64_t y = ys; y < ye; y++) {
+			stale_stencil = 3;
+			for (uint64_t x = xs; x < xe; x++) {
+				uint64_t loc = x + sx * y;
+
+				if (labels[loc] == MAX_LABEL) {
+					x++;
+					stale_stencil += 2;
+					continue;
+				}
+
+				if (stale_stencil == 1) {
+					max_left = max_middle;
+					max_middle = max_right;
+					max_right = get_max(x+1,y);
+				}
+				else if (stale_stencil >= 3) {
+					max_right = get_max(x+1,y);
+					if (max_right == MAX_LABEL) {
+						x += 2;
+						stale_stencil = 3;
+						continue;
+					}
+					max_middle = get_max(x,y);
+					if (max_middle == MAX_LABEL) {
+						x++;
+						stale_stencil = 2;
+						continue;
+					}
+					max_left = get_max(x-1,y);
+				}
+				else if (stale_stencil == 2) {
+					max_left = max_right;
+					max_right = get_max(x+1,y);
+					if (max_right == MAX_LABEL) {
+						x += 2;
+						stale_stencil = 3;
+						continue;
+					}
+					max_middle = get_max(x,y);
+				}					
+
+				stale_stencil = 0;
+
+				if (max_right == MAX_LABEL) {
+					x += 2;
+					stale_stencil = 3;
+					continue;
+				}
+				else if (max_middle == MAX_LABEL) {
+					x++;
+					stale_stencil = 2;
+					continue;
+				}
+				
+				output[loc] = std::max(
+					std::max(max_left, max_middle), 
+					max_right
+				);
+
+				stale_stencil = 1;
+			}
+		}
+	};
+
+	parallelize_blocks(
+		std::function<void(
+			const uint64_t,const uint64_t,const uint64_t,
+			const uint64_t,const uint64_t,const uint64_t
+		)>(process_block), 
+		sx, sy, /*sz=*/1, threads, /*offset=*/0
+	);
+}
+
+
+template <typename LABEL>
+void grey_erode_3d(
 	LABEL* labels, LABEL* output,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
 	const uint64_t threads
@@ -995,6 +1111,122 @@ void grey_erode(
 			const uint64_t,const uint64_t,const uint64_t
 		)>(process_block), 
 		sx, sy, sz, threads, /*offset=*/0
+	);
+}
+
+template <typename LABEL>
+void grey_erode_2d(
+	LABEL* labels, LABEL* output,
+	const uint64_t sx, const uint64_t sy,
+	const uint64_t threads
+) {
+
+	// assume a 3x3 stencil with all voxels on
+	constexpr LABEL MIN_LABEL = std::numeric_limits<LABEL>::min();
+
+	auto get_min = [&](const uint64_t xi, const uint64_t yi) {
+		const uint64_t loc = xi + sx * yi;
+
+		LABEL minval = std::numeric_limits<LABEL>::max();
+
+		if (xi < 0 || xi >= sx) {
+			return minval;
+		}
+
+		minval = std::min(minval, labels[loc]);
+
+		if (yi > 0) {
+			 minval = std::min(minval, labels[loc-sx]);
+		}
+		if (yi < sy - 1) {
+			minval = std::min(minval, labels[loc+sx]);
+		}
+
+		return minval;
+	};
+
+	auto process_block = [&](
+		const uint64_t xs, const uint64_t xe, 
+		const uint64_t ys, const uint64_t ye, 
+		const uint64_t zs, const uint64_t ze
+	){
+		LABEL min_left = MIN_LABEL;
+		LABEL min_middle = MIN_LABEL;
+		LABEL min_right = MIN_LABEL;
+
+		int stale_stencil = 3;
+
+		for (uint64_t y = ys; y < ye; y++) {
+			stale_stencil = 3;
+			for (uint64_t x = xs; x < xe; x++) {
+				uint64_t loc = x + sx * y;
+
+				if (labels[loc] == MIN_LABEL) {
+					x++;
+					stale_stencil += 2;
+					continue;
+				}
+
+				if (stale_stencil == 1) {
+					min_left = min_middle;
+					min_middle = min_right;
+					min_right = get_min(x+1,y);
+				}
+				else if (stale_stencil >= 3) {
+					min_right = get_min(x+1,y);
+					if (min_right == MIN_LABEL) {
+						x += 2;
+						stale_stencil = 3;
+						continue;
+					}
+					min_middle = get_min(x,y);
+					if (min_middle == MIN_LABEL) {
+						x++;
+						stale_stencil = 2;
+						continue;
+					}
+					min_left = get_min(x-1,y);
+				}
+				else if (stale_stencil == 2) {
+					min_left = min_right;
+					min_right = get_min(x+1,y);
+					if (min_right == MIN_LABEL) {
+						x += 2;
+						stale_stencil = 3;
+						continue;
+					}
+					min_middle = get_min(x,y);
+				}					
+
+				stale_stencil = 0;
+
+				if (min_right == MIN_LABEL) {
+					x += 2;
+					stale_stencil = 3;
+					continue;
+				}
+				else if (min_middle == MIN_LABEL) {
+					x++;
+					stale_stencil = 2;
+					continue;
+				}
+				
+				output[loc] = std::min(
+					std::min(min_left, min_middle), 
+					min_right
+				);
+
+				stale_stencil = 1;
+			}
+		}
+	};
+
+	parallelize_blocks(
+		std::function<void(
+			const uint64_t,const uint64_t,const uint64_t,
+			const uint64_t,const uint64_t,const uint64_t
+		)>(process_block), 
+		sx, sy, /*sz=*/1, threads, /*offset=*/0
 	);
 }
 
