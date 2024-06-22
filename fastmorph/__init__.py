@@ -41,8 +41,9 @@ def dilate(
   parallel = min(parallel, mp.cpu_count())
 
   labels = np.asfortranarray(labels)
-  while labels.ndim < 3:
+  while labels.ndim < 2:
     labels = labels[..., np.newaxis]
+  
   if mode == Mode.multilabel:
     output = fastmorphops.multilabel_dilate(labels, background_only, parallel)
   else:
@@ -66,7 +67,7 @@ def erode(
   parallel = min(parallel, mp.cpu_count())
 
   labels = np.asfortranarray(labels)
-  while labels.ndim < 3:
+  while labels.ndim < 2:
     labels = labels[..., np.newaxis]
 
   if mode == Mode.multilabel:
@@ -264,7 +265,7 @@ def fill_holes(
 
   if return_fill_count:
     for label in removed_set:
-      del fill_counts[label]
+      fill_counts.pop(label, None)
     ret.append(fill_counts)
 
   if return_removed:
