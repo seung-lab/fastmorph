@@ -271,7 +271,7 @@ def fill_holes(
 
   if return_fill_count:
     for label in removed_set:
-      del fill_counts[label]
+      fill_counts.pop(label, None)
     ret.append(fill_counts)
 
   if return_removed:
