@@ -155,6 +155,15 @@ def test_multilabel_dilate_2d():
 	ans[1:,:] = 2
 	assert np.all(ans == out)
 
+	labels = np.zeros([2411,2101], dtype=bool, order="F")
+	labels[10:-10,10:-10] = 1
+
+	for i in range(20):
+		labels = fastmorph.dilate(labels)
+
+	assert np.all(labels)
+
+
 def test_multilabel_erode_3d():
 	labels = np.ones((3,3,3), dtype=bool)
 	out = fastmorph.erode(labels)
