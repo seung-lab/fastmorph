@@ -20,9 +20,9 @@ void parallelize_blocks(
 ) {
 	const uint64_t block_size = (sz > 1) ? 64 : 512;
 
-	const uint64_t grid_x = std::max(static_cast<uint64_t>((sx + block_size/2) / block_size), static_cast<uint64_t>(1));
-	const uint64_t grid_y = std::max(static_cast<uint64_t>((sy + block_size/2) / block_size), static_cast<uint64_t>(1));
-	const uint64_t grid_z = std::max(static_cast<uint64_t>((sz + block_size/2) / block_size), static_cast<uint64_t>(1));
+	const uint64_t grid_x = std::max(static_cast<uint64_t>((sx + block_size - 1) / block_size), static_cast<uint64_t>(1));
+	const uint64_t grid_y = std::max(static_cast<uint64_t>((sy + block_size - 1) / block_size), static_cast<uint64_t>(1));
+	const uint64_t grid_z = std::max(static_cast<uint64_t>((sz + block_size - 1) / block_size), static_cast<uint64_t>(1));
 
 	const int real_threads = std::max(std::min(threads, grid_x * grid_y * grid_z), static_cast<uint64_t>(0));
 
