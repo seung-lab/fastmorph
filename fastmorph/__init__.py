@@ -18,7 +18,7 @@ class Mode(Enum):
 def dilate(
   labels:np.ndarray,
   background_only:bool = True,
-  parallel:int = 1,
+  parallel:int = 0,
   mode:Mode = Mode.multilabel,
   iterations:int = 1,
 ) -> np.ndarray:
@@ -66,7 +66,7 @@ def dilate(
 
 def erode(
   labels:np.ndarray, 
-  parallel:int = 1,
+  parallel:int = 0,
   mode:Mode = Mode.multilabel,
   iterations:int = 1,
 ) -> np.ndarray:
@@ -110,7 +110,7 @@ def erode(
 def opening(
   labels:np.ndarray, 
   background_only:bool = True,
-  parallel:int = 1,
+  parallel:int = 0,
   mode:Mode = Mode.multilabel,
   iterations:int = 1,
 ) -> np.ndarray:
@@ -129,7 +129,7 @@ def opening(
 def closing(
   labels:np.ndarray, 
   background_only:bool = True,
-  parallel:int = 1,
+  parallel:int = 0,
   mode:Mode = Mode.multilabel,
   iterations:int = 1,
 ) -> np.ndarray:
@@ -148,7 +148,7 @@ def closing(
 def spherical_dilate(
   labels:np.ndarray, 
   radius:float = 1.0, 
-  parallel:int = 1, 
+  parallel:int = 0, 
   anisotropy:AnisotropyType = None,
   in_place:bool = False,
 ) -> np.ndarray:
@@ -179,7 +179,7 @@ def spherical_dilate(
 def spherical_erode(
   labels:np.ndarray, 
   radius:float = 1.0, 
-  parallel:int = 1, 
+  parallel:int = 0, 
   anisotropy:AnisotropyType = None,
   in_place:bool = False,
 ) -> np.ndarray:
@@ -208,7 +208,7 @@ def spherical_erode(
 def spherical_open(
   labels:np.ndarray, 
   radius:float = 1.0,
-  parallel:int = 1, 
+  parallel:int = 0, 
   anisotropy:AnisotropyType = None,
   in_place:bool = False,
 ) -> np.ndarray:
@@ -220,7 +220,7 @@ def spherical_open(
 def spherical_close(
   labels:np.ndarray, 
   radius:float = 1.0,
-  parallel:int = 1, 
+  parallel:int = 0, 
   anisotropy:AnisotropyType = None,
   in_place:bool = False,
 ) -> np.ndarray:
