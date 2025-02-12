@@ -20,7 +20,7 @@ else:
 
 setuptools.setup(
   name="fastmorph",
-  version="1.2.1",
+  version="1.3.0",
   setup_requires=["numpy","pybind11"],
   install_requires=['numpy', 'edt', 'fill-voids', 'connected-components-3d', 'fastremap'],
   python_requires=">=3.8.0", # >= 3.8 < 4.0
@@ -48,15 +48,15 @@ setuptools.setup(
   url = "https://github.com/seung-lab/fastmorph/",
   classifiers=[
     "Intended Audience :: Developers",
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Image Processing",
     "Intended Audience :: Science/Research",
     "Operating System :: POSIX",
