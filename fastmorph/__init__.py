@@ -20,6 +20,7 @@ def dilate(
   background_only:bool = True,
   parallel:int = 1,
   mode:Mode = Mode.multilabel,
+  iterations:int = 1,
 ) -> np.ndarray:
   """
   Dilate forground labels using a 3x3x3 stencil with
@@ -35,7 +36,16 @@ def dilate(
     False: Allow labels to erode each other as they grow.
 
   parallel: how many pthreads to use in a threadpool
+
+  mode: 
+    Mode.multilabel: use mode of stencil for dilation
+    Mode.grey: use grayscale image dilation (max value)
+
+  iterations: number of times to iterate the result
   """
+  if iterations <= 0:
+    raise ValueError(f"iterations ({iterations}) must be a positive integer.")
+
   if parallel == 0:
     parallel = mp.cpu_count()
   parallel = min(parallel, mp.cpu_count())
@@ -44,16 +54,21 @@ def dilate(
   while labels.ndim < 2:
     labels = labels[..., np.newaxis]
   
-  if mode == Mode.multilabel:
-    output = fastmorphops.multilabel_dilate(labels, background_only, parallel)
-  else:
-    output = fastmorphops.grey_dilate(labels, parallel)
+  output = labels
+
+  for i in range(iterations):
+    if mode == Mode.multilabel:
+      output = fastmorphops.multilabel_dilate(output, background_only, parallel)
+    else:
+      output = fastmorphops.grey_dilate(output, parallel)
+
   return output.view(labels.dtype)
 
 def erode(
   labels:np.ndarray, 
   parallel:int = 1,
   mode:Mode = Mode.multilabel,
+  iterations:int = 1,
 ) -> np.ndarray:
   """
   Erodes forground labels using a 3x3x3 stencil with
@@ -61,19 +76,35 @@ def erode(
 
   labels: a 3D numpy array containing integer labels
     representing shapes to be dilated.
+
+  parallel: how many pthreads to use in a threadpool
+
+  mode: 
+    Mode.multilabel: are all surrounding pixels the same?
+    Mode.grey: use grayscale image dilation (min value)
+
+  iterations: number of times to iterate the result
   """
+  if iterations <= 0:
+    raise ValueError(f"iterations ({iterations}) must be a positive integer.")
+
   if parallel == 0:
     parallel = mp.cpu_count()
+
   parallel = min(parallel, mp.cpu_count())
 
   labels = np.asfortranarray(labels)
   while labels.ndim < 2:
     labels = labels[..., np.newaxis]
 
-  if mode == Mode.multilabel:
-    output = fastmorphops.multilabel_erode(labels, parallel)
-  else:
-    output = fastmorphops.grey_erode(labels, parallel)
+  output = labels
+
+  for i in range(iterations):
+    if mode == Mode.multilabel:
+      output = fastmorphops.multilabel_erode(output, parallel)
+    else:
+      output = fastmorphops.grey_erode(output, parallel)
+
   return output.view(labels.dtype)
 
 def opening(
@@ -81,6 +112,7 @@ def opening(
   background_only:bool = True,
   parallel:int = 1,
   mode:Mode = Mode.multilabel,
+  iterations:int = 1,
 ) -> np.ndarray:
   """Performs morphological opening of labels.
 
@@ -89,13 +121,17 @@ def opening(
     False: Allow labels to erode each other as they grow.
   parallel: how many pthreads to use in a threadpool
   """
-  return dilate(erode(labels, parallel, mode), background_only, parallel, mode)
+  return dilate(
+    erode(labels, parallel, mode, iterations),
+    background_only, parallel, mode, iterations
+  )
 
 def closing(
   labels:np.ndarray, 
   background_only:bool = True,
   parallel:int = 1,
   mode:Mode = Mode.multilabel,
+  iterations:int = 1,
 ) -> np.ndarray:
   """Performs morphological closing of labels.
 
@@ -104,7 +140,10 @@ def closing(
     False: Allow labels to erode each other as they grow.
   parallel: how many pthreads to use in a threadpool
   """
-  return erode(dilate(labels, background_only, parallel, mode), parallel, mode)
+  return erode(
+    dilate(labels, background_only, parallel, mode, iterations), 
+    parallel, mode, iterations
+  )
 
 def spherical_dilate(
   labels:np.ndarray, 
