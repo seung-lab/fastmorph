@@ -29,7 +29,8 @@ setuptools.setup(
   packages=setuptools.find_packages(),
   package_data={
     'fastmorph': [
-      'LICENSE',
+      'COPYING',
+      'COPYING.LESSER'
     ],
   },
   ext_modules=[
@@ -43,13 +44,13 @@ setuptools.setup(
   description="Morphological image processing for 3D multi-label images.",
   long_description=read('README.md'),
   long_description_content_type="text/markdown",
-  license = "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+  license = "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
   keywords = "morphological dialate erode dilation erosion close open fill image processing",
   url = "https://github.com/seung-lab/fastmorph/",
   classifiers=[
     "Intended Audience :: Developers",
     "Development Status :: 4 - Beta",
-    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
