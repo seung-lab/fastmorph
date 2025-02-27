@@ -44,6 +44,12 @@ def test_fill_holes():
 	assert ct[1] == 1
 	assert ct[2] == 1
 
+	labels = np.ones((10,10,10), dtype=int)
+	labels[5,5,2] = 777
+
+	res, removed = fastmorph.fill_holes(labels, remove_enclosed=True, return_removed=True)
+	assert removed == set([777])
+
 	labels = np.ones((10,10,10), dtype=bool)
 	labels[5,5,2] = 0
 

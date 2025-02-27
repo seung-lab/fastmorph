@@ -303,7 +303,7 @@ def fill_holes(
     if not remove_enclosed and sub_labels:
       sub_labels = [ int(l) for l in sub_labels ]
       raise FillError(f"{sub_labels} would have been deleted by this operation.")
-    
+
     labels_set -= sub_labels
     removed_set |= sub_labels
     cc_labels[slices][binary_image] = mapping[label]
@@ -316,6 +316,7 @@ def fill_holes(
     ret.append(fill_counts)
 
   if return_removed:
+    removed_set = set([ mapping[l] for l in removed_set ])
     ret.append(removed_set)
 
   return (ret[0] if len(ret) == 1 else tuple(ret))
