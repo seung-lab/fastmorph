@@ -262,7 +262,13 @@ def fill_holes(
       ret.append(set())
     return (ret[0] if len(ret) == 1 else tuple(ret))
 
-  cc_labels, N = cc3d.connected_components(labels, return_N=True)
+  out_dtype = np.uint32
+  if labels.dtype == np.uint64:
+    out_dtype = np.uint64
+
+  cc_labels, N = cc3d.connected_components(
+    labels, return_N=True, out_dtype=out_dtype,
+  )
   stats = cc3d.statistics(cc_labels)
   mapping = fastremap.component_map(cc_labels, labels)
 
