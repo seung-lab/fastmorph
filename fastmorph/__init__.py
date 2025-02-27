@@ -301,6 +301,7 @@ def fill_holes(
     sub_labels.remove(label)
     sub_labels.discard(0)
     if not remove_enclosed and sub_labels:
+      sub_labels = [ int(l) for l in sub_labels ]
       raise FillError(f"{sub_labels} would have been deleted by this operation.")
     
     labels_set -= sub_labels
