@@ -262,25 +262,19 @@ def fill_holes(
       ret.append(set())
     return (ret[0] if len(ret) == 1 else tuple(ret))
 
-  out_dtype = np.uint32
-  if labels.dtype == np.uint64:
-    out_dtype = np.uint64
-
-  cc_labels, N = cc3d.connected_components(
-    labels, return_N=True, out_dtype=out_dtype,
-  )
+  cc_labels, N = cc3d.connected_components(labels, return_N=True)
   stats = cc3d.statistics(cc_labels)
   mapping = fastremap.component_map(cc_labels, labels)
 
   fill_counts = {}
   all_slices = stats["bounding_boxes"]
 
-  labels = list(range(1, N+1))
-  labels_set = set(labels)
+  output = np.zeros(labels.shape, dtype=labels.dtype, order="F")
+
   removed_set = set()
 
-  for label in labels:
-    if label not in labels_set:
+  for label in range(1, N+1):
+    if label in removed_set:
       continue
 
     slices = all_slices[label]
@@ -304,11 +298,10 @@ def fill_holes(
       sub_labels = [ int(l) for l in sub_labels ]
       raise FillError(f"{sub_labels} would have been deleted by this operation.")
 
-    labels_set -= sub_labels
     removed_set |= sub_labels
-    cc_labels[slices][binary_image] = mapping[label]
+    output[slices][binary_image] = mapping[label]
 
-  ret = [ cc_labels ]
+  ret = [ output ]
 
   if return_fill_count:
     for label in removed_set:
