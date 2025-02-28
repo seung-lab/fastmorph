@@ -468,6 +468,7 @@ template <typename LABEL>
 void multilabel_erode(
 	LABEL* labels, LABEL* output,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
+	const bool erode_border,
 	const uint64_t threads
 ) {
 
@@ -622,6 +623,7 @@ template <typename LABEL>
 void multilabel_erode(
 	LABEL* labels, LABEL* output,
 	const uint64_t sx, const uint64_t sy,
+	const bool erode_border,
 	const uint64_t threads
 ) {
 
@@ -631,10 +633,16 @@ void multilabel_erode(
 		const uint64_t loc = xi + sx * yi;
 
 		return static_cast<LABEL>(labels[loc] * (
-			(xi >= 0 && xi < sx)
+			((xi >= 0 && xi < sx)
 			&& (labels[loc] != 0)
-			&& (yi > 0 && labels[loc-sx] == labels[loc])
-			&& (yi < sy - 1 && labels[loc+sx] == labels[loc])
+			&& (
+				(!erode_border && yi == 0)
+				|| (yi > 0 && labels[loc-sx] == labels[loc])
+			)
+			&& (
+				(!erode_border && yi >= sy - 1)
+				|| (yi < sy - 1 && labels[loc+sx] == labels[loc]))
+			)
 		));
 	};
 
@@ -663,10 +671,21 @@ void multilabel_erode(
 				if (stale_stencil == 1) {
 					pure_left = pure_middle;
 					pure_middle = pure_right;
-					pure_right = is_pure(x+1,y);
+
+					if (erode_border || (x < sx - 1)) {
+						pure_right = is_pure(x+1,y);	
+					}
+					else {
+						pure_right = pure_middle;
+					}
 				}
 				else if (stale_stencil >= 3) {
-					pure_right = is_pure(x+1,y);
+					if (erode_border || (x < sx - 1)) {
+						pure_right = is_pure(x+1,y);	
+					}
+					else {
+						pure_right = pure_middle;
+					}
 					if (!pure_right) {
 						x += 2;
 						stale_stencil = 3;
@@ -678,17 +697,34 @@ void multilabel_erode(
 						stale_stencil = 2;
 						continue;
 					}
-					pure_left = is_pure(x-1,y);
+
+					if (erode_border || (x > 0)) {
+						pure_left = is_pure(x-1,y);
+					}
+					else {
+						pure_left = pure_middle;
+					}
 				}
 				else if (stale_stencil == 2) {
 					pure_left = pure_right;
-					pure_right = is_pure(x+1,y);
-					if (!pure_right) {
-						x += 2;
-						stale_stencil = 3;
-						continue;
+					if (erode_border || (x < sx - 1)) {
+						pure_right = is_pure(x+1,y);
+						if (!pure_right) {
+							x += 2;
+							stale_stencil = 3;
+							continue;
+						}
+						pure_middle = is_pure(x,y);
 					}
-					pure_middle = is_pure(x,y);
+					else {
+						pure_middle = is_pure(x,y);
+						pure_right = pure_middle;
+						if (!pure_right) {
+							x += 2;
+							stale_stencil = 3;
+							continue;
+						}
+					}
 				}
 				
 				stale_stencil = 0;
@@ -717,7 +753,8 @@ void multilabel_erode(
 			const uint64_t,const uint64_t,const uint64_t,
 			const uint64_t,const uint64_t,const uint64_t
 		)>(process_block), 
-		sx, sy, /*sz=*/1, threads, /*offset=*/1
+		sx, sy, /*sz=*/1, threads, 
+		/*offset=*/static_cast<uint64_t>(erode_border)
 	);
 }
 

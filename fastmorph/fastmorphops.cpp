@@ -139,7 +139,11 @@ py::array multilabel_dilate(
 }
 
 // assumes fortran order
-py::array multilabel_erode(const py::array &labels, const uint64_t threads) {
+py::array multilabel_erode(
+	const py::array &labels, 
+	const bool erode_border,
+	const uint64_t threads
+) {
 	py::dtype dt = labels.dtype();
 	int width = dt.itemsize();
 
@@ -159,6 +163,7 @@ py::array multilabel_erode(const py::array &labels, const uint64_t threads) {
 		reinterpret_cast<uintx_t*>(labels_ptr),\
 		reinterpret_cast<uintx_t*>(output_ptr),\
 		sx, sy, sz,\
+		erode_border,\
 		threads\
 	);\
 	return to_numpy(reinterpret_cast<uintx_t*>(output_ptr), sx, sy, sz);
@@ -168,11 +173,16 @@ py::array multilabel_erode(const py::array &labels, const uint64_t threads) {
 		reinterpret_cast<uintx_t*>(labels_ptr),\
 		reinterpret_cast<uintx_t*>(output_ptr),\
 		sx, sy,\
+		erode_border,\
 		threads\
 	);\
 	return to_numpy(reinterpret_cast<uintx_t*>(output_ptr), sx, sy);
 
 	if (labels.ndim() > 2) {
+		if (erode_border == false) {
+			throw std::runtime_error("erode_border=false not supported for 3d.");
+		}
+
 		DISPATCH_TO_TYPES(ERODE_HELPER_3D)
 	}
 	else {

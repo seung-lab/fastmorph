@@ -71,6 +71,7 @@ def erode(
   parallel:int = 0,
   mode:Mode = Mode.multilabel,
   iterations:int = 1,
+  erode_border:bool = True,
 ) -> np.ndarray:
   """
   Erodes forground labels using a 3x3x3 stencil with
@@ -105,7 +106,7 @@ def erode(
 
   for i in range(iterations):
     if mode == Mode.multilabel:
-      output = fastmorphops.multilabel_erode(output, parallel)
+      output = fastmorphops.multilabel_erode(output, erode_border, parallel)
     else:
       output = fastmorphops.grey_erode(output, parallel)
 
