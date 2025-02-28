@@ -200,6 +200,10 @@ def test_multilabel_erode_3d():
 	out = fastmorph.erode(labels)
 	assert np.sum(out) == 27
 
+	labels = np.ones((5,5,5), dtype=bool)
+	out = fastmorph.erode(labels, erode_border=False, iterations=5)
+	assert np.sum(out) == 125
+
 def test_multilabel_erode_2d():
 	labels = np.ones((3,3), dtype=bool)
 	out = fastmorph.erode(labels)
