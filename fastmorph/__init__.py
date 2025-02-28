@@ -140,10 +140,18 @@ def opening(
     else it is regarded as a value that would preserve the
     current value. Only has an effect for multilabel erosion.
   """
-  return dilate(
-    erode(labels, parallel, mode, iterations, erode_border),
-    background_only, parallel, mode, iterations
-  )
+  if iterations < 0:
+    raise ValueError(f"iterations ({iterations}) must be a positive integer.")
+  elif iterations == 0:
+    return np.copy(labels, order="F")
+
+  output = labels
+  for i in range(iterations):
+    output = dilate(
+      erode(output, parallel, mode, iterations=1, erode_border=erode_border),
+      background_only, parallel, mode, iterations=1
+    )
+  return output
 
 def closing(
   labels:np.ndarray, 
@@ -169,10 +177,18 @@ def closing(
     else it is regarded as a value that would preserve the
     current value. Only has an effect for multilabel erosion.
   """
-  return erode(
-    dilate(labels, background_only, parallel, mode, iterations), 
-    parallel, mode, iterations, erode_border,
-  )
+  if iterations < 0:
+    raise ValueError(f"iterations ({iterations}) must be a positive integer.")
+  elif iterations == 0:
+    return np.copy(labels, order="F")
+
+  output = labels
+  for i in range(iterations):
+    output = erode(
+      dilate(output, background_only, parallel, mode, iterations=1), 
+      parallel, mode, iterations=1, erode_border=erode_border,
+    )
+  return output
 
 def spherical_dilate(
   labels:np.ndarray, 
