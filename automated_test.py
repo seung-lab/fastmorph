@@ -230,6 +230,10 @@ def test_multilabel_erode_2d():
 	out = fastmorph.erode(labels)
 	assert np.sum(out) == 9
 
+	labels = np.ones((5,5), dtype=bool)
+	out = fastmorph.erode(labels, iterations=5, erode_border=False)
+	assert np.sum(out) == 25
+
 @pytest.mark.parametrize('dtype', [
 	np.uint8,np.uint16,np.uint32,np.uint64,
 	np.int8,np.int16,np.int32,np.int64,
