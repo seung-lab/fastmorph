@@ -43,8 +43,10 @@ def dilate(
 
   iterations: number of times to iterate the result
   """
-  if iterations <= 0:
+  if iterations < 0:
     raise ValueError(f"iterations ({iterations}) must be a positive integer.")
+  elif iterations == 0:
+    return np.copy(labels, order="F")
 
   if parallel == 0:
     parallel = mp.cpu_count()
@@ -85,8 +87,10 @@ def erode(
 
   iterations: number of times to iterate the result
   """
-  if iterations <= 0:
+  if iterations < 0:
     raise ValueError(f"iterations ({iterations}) must be a positive integer.")
+  elif iterations == 0:
+    return np.copy(labels, order="F")
 
   if parallel == 0:
     parallel = mp.cpu_count()
