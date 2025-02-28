@@ -483,14 +483,14 @@ void multilabel_erode(
 		return static_cast<LABEL>(labels[loc] * (
 			(xi >= 0 && xi < sx)
 			&& (labels[loc] != 0)
-			&& (yi > 0 && labels[loc-sx] == labels[loc])
-			&& (yi < sy - 1 && labels[loc+sx] == labels[loc])
-			&& (zi > 0 && labels[loc-sxy] == labels[loc])
-			&& (zi < sz - 1 && labels[loc+sxy] == labels[loc])
-			&& (yi > 0 && zi > 0 && labels[loc-sx-sxy] == labels[loc])
-			&& (yi < sy -1 && zi > 0 && labels[loc+sx-sxy] == labels[loc])
-			&& (yi > 0 && zi < sz - 1 && labels[loc-sx+sxy] == labels[loc])
-			&& (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] == labels[loc])
+			&& ((!erode_border && (yi == 0)) || (yi > 0 && labels[loc-sx] == labels[loc]))
+			&& ((!erode_border && (yi >= sy - 1)) || (yi < sy - 1 && labels[loc+sx] == labels[loc]))
+			&& ((!erode_border && (zi == 0)) || (zi > 0 && labels[loc-sxy] == labels[loc]))
+			&& ((!erode_border && (zi >= sz - 1)) || (zi < sz - 1 && labels[loc+sxy] == labels[loc]))
+			&& ((!erode_border && (yi == 0 || zi == 0)) || (yi > 0 && zi > 0 && labels[loc-sx-sxy] == labels[loc]))
+			&& ((!erode_border && (yi >= sy - 1 || zi == 0)) || (yi < sy -1 && zi > 0 && labels[loc+sx-sxy] == labels[loc]))
+			&& ((!erode_border && (yi == 0 || zi >= sz - 1)) || (yi > 0 && zi < sz - 1 && labels[loc-sx+sxy] == labels[loc]))
+			&& ((!erode_border && (yi >= sy - 1 || zi >= sz - 1)) || (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] == labels[loc]))
 		));
 	};
 
@@ -501,9 +501,9 @@ void multilabel_erode(
 
 		return static_cast<LABEL>(labels[loc] * (
 			(xi >= 0 && xi < sx)
-		 && (zi < sz - 1 && labels[loc+sxy] == labels[loc])
-		 && (yi > 0 && zi < sz - 1 && labels[loc-sx+sxy] == labels[loc])
-		 && (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] == labels[loc])
+		 && ((!erode_border && (zi >= sz - 1)) || (zi < sz - 1 && labels[loc+sxy] == labels[loc]))
+		 && ((!erode_border && (yi == 0 || zi >= sz - 1)) || (yi > 0 && zi < sz - 1 && labels[loc-sx+sxy] == labels[loc]))
+		 && ((!erode_border && (yi >= sy - 1 || sz >= sz - 1)) || (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] == labels[loc]))
 		));
 	};
 
@@ -515,9 +515,9 @@ void multilabel_erode(
 
 		return static_cast<LABEL>(labels[loc] * (
 			    (xi >= 0 && xi < sx)
-			&& (yi < sy - 1 && labels[loc+sx] == labels[loc])
-			&& (yi < sy - 1 && zi > 0 && labels[loc+sx-sxy] == labels[loc])
-			&& (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] == labels[loc]))
+			&& ((!erode_border && (yi >= sy - 1)) || (yi < sy - 1 && labels[loc+sx] == labels[loc]))
+			&& ((!erode_border && (yi >= sy - 1 || zi == 0)) || (yi < sy - 1 && zi > 0 && labels[loc+sx-sxy] == labels[loc]))
+			&& ((!erode_border && (yi >= sy - 1 || zi >= sz - 1)) || (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] == labels[loc])))
 		);
 	};
 
@@ -536,10 +536,20 @@ void multilabel_erode(
 	if (stale_stencil == 1) {\
 		pure_left = pure_middle;\
 		pure_middle = pure_right;\
-		pure_right = is_pure_fn(x+1,y,z);\
+		if (erode_border || (x < sx - 1)) {\
+			pure_right = is_pure(x+1,y,z);\
+		}\
+		else {\
+			pure_right = pure_middle;\
+		}\
 	}\
 	else if (stale_stencil >= 3) {\
-		pure_right = is_pure_fn(x+1,y,z);\
+		if (erode_border || (x < sx - 1)) {\
+			pure_right = is_pure(x+1,y,z);\
+		}\
+		else {\
+			pure_right = pure_middle;\
+		}\
 		if (!pure_right) {\
 			x += 2;\
 			stale_stencil = 3;\
@@ -551,17 +561,33 @@ void multilabel_erode(
 			stale_stencil = 2;\
 			continue;\
 		}\
-		pure_left = is_pure_fn(x-1,y,z);\
+		if (erode_border || (x > 0)) {\
+			pure_left = is_pure(x-1,y,z);\
+		}\
+		else {\
+			pure_left = pure_middle;\
+		}\
 	}\
 	else if (stale_stencil == 2) {\
 		pure_left = pure_right;\
-		pure_right = is_pure_fn(x+1,y,z);\
-		if (!pure_right) {\
-			x += 2;\
-			stale_stencil = 3;\
-			continue;\
+		if (erode_border || (x < sx - 1)) {\
+			pure_right = is_pure(x+1,y,z);\
+			if (!pure_right) {\
+				x += 2;\
+				stale_stencil = 3;\
+				continue;\
+			}\
+			pure_middle = is_pure(x,y,z);\
 		}\
-		pure_middle = is_pure_fn(x,y,z);\
+		else {\
+			pure_middle = is_pure(x,y,z);\
+			pure_right = pure_middle;\
+			if (!pure_right) {\
+				x += 2;\
+				stale_stencil = 3;\
+				continue;\
+			}\
+		}\
 	}
 
 		for (uint64_t z = zs; z < ze; z++) {
@@ -615,7 +641,8 @@ void multilabel_erode(
 			const uint64_t,const uint64_t,const uint64_t,
 			const uint64_t,const uint64_t,const uint64_t
 		)>(process_block), 
-		sx, sy, sz, threads, /*offset=*/1
+		sx, sy, sz, threads, 
+		/*offset=*/static_cast<uint64_t>(erode_border)
 	);
 }
 

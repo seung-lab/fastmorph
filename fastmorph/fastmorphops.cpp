@@ -179,10 +179,6 @@ py::array multilabel_erode(
 	return to_numpy(reinterpret_cast<uintx_t*>(output_ptr), sx, sy);
 
 	if (labels.ndim() > 2) {
-		if (erode_border == false) {
-			throw std::runtime_error("erode_border=false not supported for 3d.");
-		}
-
 		DISPATCH_TO_TYPES(ERODE_HELPER_3D)
 	}
 	else {
