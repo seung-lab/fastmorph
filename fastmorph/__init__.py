@@ -90,7 +90,7 @@ def erode(
 
   erode_border: if True, the border is treated as background,
     else it is regarded as a value that would preserve the
-    current value.
+    current value. Only has an effect for multilabel erosion.
   """
   if iterations < 0:
     raise ValueError(f"iterations ({iterations}) must be a positive integer.")
@@ -138,7 +138,7 @@ def opening(
 
   erode_border: if True, the border is treated as background,
     else it is regarded as a value that would preserve the
-    current value.
+    current value. Only has an effect for multilabel erosion.
   """
   return dilate(
     erode(labels, parallel, mode, iterations, erode_border),
@@ -167,7 +167,7 @@ def closing(
 
   erode_border: if True, the border is treated as background,
     else it is regarded as a value that would preserve the
-    current value.
+    current value. Only has an effect for multilabel erosion.
   """
   return erode(
     dilate(labels, background_only, parallel, mode, iterations), 
