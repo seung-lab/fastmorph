@@ -332,6 +332,8 @@ def fill_holes(
       return_fill_count=True
     )
     fill_counts[label] = pixels_filled
+    output[slices][binary_image] = mapping[label]
+
     if pixels_filled == 0:
       continue
 
@@ -344,7 +346,6 @@ def fill_holes(
       raise FillError(f"{sub_labels} would have been deleted by this operation.")
 
     removed_set |= sub_labels
-    output[slices][binary_image] = mapping[label]
 
   ret = [ output ]
 
