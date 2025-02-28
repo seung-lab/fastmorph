@@ -71,6 +71,7 @@ def erode(
   parallel:int = 0,
   mode:Mode = Mode.multilabel,
   iterations:int = 1,
+  erode_border:bool = True,
 ) -> np.ndarray:
   """
   Erodes forground labels using a 3x3x3 stencil with
@@ -86,6 +87,10 @@ def erode(
     Mode.grey: use grayscale image dilation (min value)
 
   iterations: number of times to iterate the result
+
+  erode_border: if True, the border is treated as background,
+    else it is regarded as a value that would preserve the
+    current value. Only has an effect for multilabel erosion.
   """
   if iterations < 0:
     raise ValueError(f"iterations ({iterations}) must be a positive integer.")
@@ -105,7 +110,7 @@ def erode(
 
   for i in range(iterations):
     if mode == Mode.multilabel:
-      output = fastmorphops.multilabel_erode(output, parallel)
+      output = fastmorphops.multilabel_erode(output, erode_border, parallel)
     else:
       output = fastmorphops.grey_erode(output, parallel)
 
@@ -117,6 +122,7 @@ def opening(
   parallel:int = 0,
   mode:Mode = Mode.multilabel,
   iterations:int = 1,
+  erode_border:bool = True,
 ) -> np.ndarray:
   """Performs morphological opening of labels.
 
@@ -124,9 +130,18 @@ def opening(
     True: Only evaluate background voxels for dilation.
     False: Allow labels to erode each other as they grow.
   parallel: how many pthreads to use in a threadpool
+  mode: 
+    Mode.multilabel: are all surrounding pixels the same?
+    Mode.grey: use grayscale image dilation (min value)
+
+  iterations: number of times to iterate the result
+
+  erode_border: if True, the border is treated as background,
+    else it is regarded as a value that would preserve the
+    current value. Only has an effect for multilabel erosion.
   """
   return dilate(
-    erode(labels, parallel, mode, iterations),
+    erode(labels, parallel, mode, iterations, erode_border),
     background_only, parallel, mode, iterations
   )
 
@@ -136,6 +151,7 @@ def closing(
   parallel:int = 0,
   mode:Mode = Mode.multilabel,
   iterations:int = 1,
+  erode_border:bool = True,
 ) -> np.ndarray:
   """Performs morphological closing of labels.
 
@@ -143,10 +159,19 @@ def closing(
     True: Only evaluate background voxels for dilation.
     False: Allow labels to erode each other as they grow.
   parallel: how many pthreads to use in a threadpool
+  mode: 
+    Mode.multilabel: are all surrounding pixels the same?
+    Mode.grey: use grayscale image dilation (min value)
+
+  iterations: number of times to iterate the result
+
+  erode_border: if True, the border is treated as background,
+    else it is regarded as a value that would preserve the
+    current value. Only has an effect for multilabel erosion.
   """
   return erode(
     dilate(labels, background_only, parallel, mode, iterations), 
-    parallel, mode, iterations
+    parallel, mode, iterations, erode_border,
   )
 
 def spherical_dilate(
