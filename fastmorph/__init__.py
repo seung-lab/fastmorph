@@ -300,11 +300,11 @@ def fill_holes(
 
   fill_counts = {}
   all_slices = stats["bounding_boxes"]
+  total_counts = stats["voxel_counts"]
 
   output = np.zeros(labels.shape, dtype=labels.dtype, order="F")
 
-  removed_set = set()
-
+  removed_set = set()  
   for label in range(1, N+1):
     if label in removed_set:
       continue
@@ -350,8 +350,15 @@ def fill_holes(
     if pixels_filled == 0:
       continue
 
-    sub_labels = fastremap.unique(cc_labels[slices][binary_image])
-    sub_labels = set(sub_labels)
+
+    sub_labels, sub_counts = fastremap.unique(cc_labels[slices][binary_image], return_counts=True)
+
+    if morphological_closing:
+      sub_counts = { l:c for l,c in zip(sub_labels, sub_counts) }
+      sub_labels = set([ lbl for lbl in sub_labels if sub_counts[lbl] == total_counts[lbl] ])
+    else:
+      sub_labels = set(sub_labels)
+
     sub_labels.discard(label)
     sub_labels.discard(0)
     if not remove_enclosed and sub_labels:
