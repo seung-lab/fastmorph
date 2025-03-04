@@ -294,9 +294,10 @@ def fill_holes(
       ret.append(set())
     return (ret[0] if len(ret) == 1 else tuple(ret))
 
-  cc_labels, N = cc3d.connected_components(labels, return_N=True)
-  stats = cc3d.statistics(cc_labels)
-  mapping = fastremap.component_map(cc_labels, labels)
+  renumbered_labels, mapping = fastremap.renumber(labels)
+  mapping = { v:k for k,v in mapping.items() }
+  N = len(mapping)
+  stats = cc3d.statistics(renumbered_labels)
 
   fill_counts = {}
   all_slices = stats["bounding_boxes"]
@@ -305,7 +306,7 @@ def fill_holes(
   output = np.zeros(labels.shape, dtype=labels.dtype, order="F")
 
   removed_set = set()  
-  for label in range(1, N+1):
+  for label in range(1, N):
     if label in removed_set:
       continue
 
@@ -313,7 +314,7 @@ def fill_holes(
     if slices is None:
       continue
 
-    binary_image = (cc_labels[slices] == label)
+    binary_image = (renumbered_labels[slices] == label)
 
     pixels_filled = 0
 
@@ -350,8 +351,7 @@ def fill_holes(
     if pixels_filled == 0:
       continue
 
-
-    sub_labels, sub_counts = fastremap.unique(cc_labels[slices][binary_image], return_counts=True)
+    sub_labels, sub_counts = fastremap.unique(renumbered_labels[slices][binary_image], return_counts=True)
 
     if morphological_closing:
       sub_counts = { l:c for l,c in zip(sub_labels, sub_counts) }
