@@ -121,10 +121,12 @@ def opening(
   background_only:bool = True,
   parallel:int = 0,
   mode:Mode = Mode.multilabel,
-  iterations:int = 1,
   erode_border:bool = True,
 ) -> np.ndarray:
   """Performs morphological opening of labels.
+
+  This operator is idempotent with the exception
+  of boundary effects.
 
   background_only is passed through to dilate.
     True: Only evaluate background voxels for dilation.
@@ -133,35 +135,26 @@ def opening(
   mode: 
     Mode.multilabel: are all surrounding pixels the same?
     Mode.grey: use grayscale image dilation (min value)
-
-  iterations: number of times to iterate the result
-
   erode_border: if True, the border is treated as background,
     else it is regarded as a value that would preserve the
     current value. Only has an effect for multilabel erosion.
   """
-  if iterations < 0:
-    raise ValueError(f"iterations ({iterations}) must be a positive integer.")
-  elif iterations == 0:
-    return np.copy(labels, order="F")
-
-  output = labels
-  for i in range(iterations):
-    output = dilate(
-      erode(output, parallel, mode, iterations=1, erode_border=erode_border),
-      background_only, parallel, mode, iterations=1
-    )
-  return output
+  return dilate(
+    erode(labels, parallel, mode, iterations=1, erode_border=erode_border),
+    background_only, parallel, mode, iterations=1
+  )
 
 def closing(
   labels:np.ndarray, 
   background_only:bool = True,
   parallel:int = 0,
   mode:Mode = Mode.multilabel,
-  iterations:int = 1,
   erode_border:bool = True,
 ) -> np.ndarray:
   """Performs morphological closing of labels.
+
+  This operator is idempotent with the exception
+  of boundary effects.
 
   background_only is passed through to dilate.
     True: Only evaluate background voxels for dilation.
@@ -170,25 +163,14 @@ def closing(
   mode: 
     Mode.multilabel: are all surrounding pixels the same?
     Mode.grey: use grayscale image dilation (min value)
-
-  iterations: number of times to iterate the result
-
   erode_border: if True, the border is treated as background,
     else it is regarded as a value that would preserve the
     current value. Only has an effect for multilabel erosion.
   """
-  if iterations < 0:
-    raise ValueError(f"iterations ({iterations}) must be a positive integer.")
-  elif iterations == 0:
-    return np.copy(labels, order="F")
-
-  output = labels
-  for i in range(iterations):
-    output = erode(
-      dilate(output, background_only, parallel, mode, iterations=1), 
-      parallel, mode, iterations=1, erode_border=erode_border,
-    )
-  return output
+  return erode(
+    dilate(labels, background_only, parallel, mode, iterations=1), 
+    parallel, mode, iterations=1, erode_border=erode_border,
+  )
 
 def spherical_dilate(
   labels:np.ndarray, 
@@ -283,6 +265,8 @@ def fill_holes(
   return_fill_count:bool = False,
   remove_enclosed:bool = False,
   return_removed:bool = False,
+  fix_borders:bool = False,
+  morphological_closing:bool = False,
 ) -> np.ndarray:
   """
   For fill holes in toplogically closed objects.
@@ -298,7 +282,7 @@ def fill_holes(
   Return value: (filled_labels, fill_count (if specified), removed_set (if specified))
   """
   assert np.issubdtype(labels.dtype, np.integer) or np.issubdtype(labels.dtype, bool), "fill_holes is currently only supported for integer or binary images."
-  if np.issubdtype(labels.dtype, bool):
+  if np.issubdtype(labels.dtype, bool) and not fix_borders and not morphological_closing:
     filled_labels, filled_ct = fill_voids.fill(labels, return_fill_count=True)
     ret = [ filled_labels ]
     if return_fill_count:
@@ -327,10 +311,36 @@ def fill_holes(
       continue
 
     binary_image = (cc_labels[slices] == label)
-    binary_image, pixels_filled = fill_voids.fill(
+
+    pixels_filled = 0
+
+    if morphological_closing:
+      dilated_binary_image = dilate(binary_image)
+      pixels_filled += np.sum(dilated_binary_image != binary_image)
+      binary_image = dilated_binary_image
+      del dilated_binary_image
+
+    if fix_borders:
+      binary_image[:,:,0], pf1 = fill_voids.fill(binary_image[:,:,0], return_fill_count=True)
+      binary_image[:,:,-1], pf2 = fill_voids.fill(binary_image[:,:,-1], return_fill_count=True)
+      binary_image[:,0,:], pf3 = fill_voids.fill(binary_image[:,0,:], return_fill_count=True)
+      binary_image[:,-1,:], pf4 = fill_voids.fill(binary_image[:,-1,:], return_fill_count=True)
+      binary_image[0,:,:], pf5 = fill_voids.fill(binary_image[0,:,:], return_fill_count=True)
+      binary_image[-1,:,:], pf6 = fill_voids.fill(binary_image[-1,:,:], return_fill_count=True)
+      pixels_filled += pf1 + pf2 + pf3 + pf4 + pf5 + pf6
+
+    binary_image, pf7 = fill_voids.fill(
       binary_image, in_place=True, 
       return_fill_count=True
     )
+    pixels_filled += pf7
+
+    if morphological_closing:
+      eroded_binary_image = erode(binary_image, erode_border=False)
+      pixels_filled -= np.sum(eroded_binary_image != binary_image)
+      binary_image = eroded_binary_image
+      del eroded_binary_image
+
     fill_counts[label] = pixels_filled
     output[slices][binary_image] = mapping[label]
 
@@ -339,7 +349,7 @@ def fill_holes(
 
     sub_labels = fastremap.unique(cc_labels[slices][binary_image])
     sub_labels = set(sub_labels)
-    sub_labels.remove(label)
+    sub_labels.discard(label)
     sub_labels.discard(0)
     if not remove_enclosed and sub_labels:
       sub_labels = [ int(l) for l in sub_labels ]

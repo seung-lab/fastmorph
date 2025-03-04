@@ -10,7 +10,7 @@ We provide the following multithreaded (except where noted) operations:
 - Grayscale Stenciled Dilation, Erosion, Opening, Closing
 - Multi-Label Spherical Erosion
 - Binary Spherical Dilation, Opening, and Closing
-- Multi-Label Fill Voids (single threaded)
+- Multi-Label Fill Voids (mostly single threaded)
 
 Highlights compared to other libraries:
 
@@ -71,6 +71,17 @@ morphed = fastmorph.spherical_erode(labels, radius=1, parallel=2, anisotropy=(1,
 # Note that for multilabel images, by default, if a label is totally enclosed by another,
 # a FillError will be raised. If remove_enclosed is True, the label will be overwritten.
 filled_labels, ct = fastmorph.fill_holes(labels, return_fill_count=True, remove_enclosed=False)
+
+# If the holes in your segmentation are imperfectly sealed, consider
+# using the following options.
+filled_labels = fastmorph.fill_holes(
+	labels, 
+	# runs 2d fill on the sides of the cube for each binary image
+	fix_borders=True, 
+	# does a dilate and then an erode after filling holes
+	morphological_closing=True,
+)
+
 ```
 
 ## Performance
