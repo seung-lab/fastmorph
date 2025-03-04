@@ -349,7 +349,7 @@ def fill_holes(
 
     sub_labels = fastremap.unique(cc_labels[slices][binary_image])
     sub_labels = set(sub_labels)
-    sub_labels.remove(label)
+    sub_labels.discard(label)
     sub_labels.discard(0)
     if not remove_enclosed and sub_labels:
       sub_labels = [ int(l) for l in sub_labels ]
