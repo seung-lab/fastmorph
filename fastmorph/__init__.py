@@ -266,7 +266,7 @@ def fill_holes(
   remove_enclosed:bool = False,
   return_removed:bool = False,
   fix_borders:bool = False,
-  morphological_close:bool = False,
+  morphological_closing:bool = False,
 ) -> np.ndarray:
   """
   For fill holes in toplogically closed objects.
@@ -282,7 +282,7 @@ def fill_holes(
   Return value: (filled_labels, fill_count (if specified), removed_set (if specified))
   """
   assert np.issubdtype(labels.dtype, np.integer) or np.issubdtype(labels.dtype, bool), "fill_holes is currently only supported for integer or binary images."
-  if np.issubdtype(labels.dtype, bool) and not fix_borders and not morphological_close:
+  if np.issubdtype(labels.dtype, bool) and not fix_borders and not morphological_closing:
     filled_labels, filled_ct = fill_voids.fill(labels, return_fill_count=True)
     ret = [ filled_labels ]
     if return_fill_count:
@@ -314,8 +314,11 @@ def fill_holes(
 
     pixels_filled = 0
 
-    if morphological_close:
-      binary_image = dilate(binary_image)
+    if morphological_closing:
+      dilated_binary_image = dilate(binary_image)
+      pixels_filled += np.sum(dilated_binary_image != binary_image)
+      binary_image = dilated_binary_image
+      del dilated_binary_image
 
     if fix_borders:
       binary_image[:,:,0], pf1 = fill_voids.fill(binary_image[:,:,0], return_fill_count=True)
@@ -332,8 +335,11 @@ def fill_holes(
     )
     pixels_filled += pf7
 
-    if morphological_close:
-      binary_image = erode(binary_image, erode_border=False)
+    if morphological_closing:
+      eroded_binary_image = erode(binary_image, erode_border=False)
+      pixels_filled -= np.sum(eroded_binary_image != binary_image)
+      binary_image = eroded_binary_image
+      del eroded_binary_image
 
     fill_counts[label] = pixels_filled
     output[slices][binary_image] = mapping[label]
