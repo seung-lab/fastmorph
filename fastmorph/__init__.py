@@ -278,6 +278,9 @@ def fill_holes(
     will be removed. Otherwise, raise a FillError.
   return_removed: returns the set of totally enclosed 
     labels that were eliminated
+  fix_borders: run 2d fill along the edges of the image on each binary image
+  morphological_closing: perform a dilation first, and then erode at the end
+    of the hole filling process
 
   Return value: (filled_labels, fill_count (if specified), removed_set (if specified))
   """
