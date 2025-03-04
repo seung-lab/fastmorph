@@ -278,6 +278,19 @@ def test_multilabel_erode_2d():
 	out = fastmorph.erode(labels, iterations=5, erode_border=False)
 	assert np.sum(out) == 25
 
+	labels = np.array([
+		[1, 1, 1, 0],
+		[1, 1, 0, 0],
+		[0, 0, 0, 0],
+	], dtype=bool).T
+	out = fastmorph.erode(labels, erode_border=False)
+	ans = np.array([
+		[1, 0, 0, 0],
+		[0, 0, 0, 0],
+		[0, 0, 0, 0],
+	], dtype=bool).T
+	assert np.all(out == ans)
+
 @pytest.mark.parametrize('dtype', [
 	np.uint8,np.uint16,np.uint32,np.uint64,
 	np.int8,np.int16,np.int32,np.int64,
