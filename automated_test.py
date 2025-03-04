@@ -69,6 +69,46 @@ def test_fill_holes():
 	assert res[1] == 1
 	assert res[2] == set()
 
+def test_fill_fix_borders():
+	labels = np.ones([100,100,100], dtype=np.uint8)
+	labels[40:60,40:60,:] = 0
+	labels[40:60,:,40:60] = 0
+	labels[:,40:60,40:60] = 0
+
+	res, cts = fastmorph.fill_holes(
+		labels, 
+		fix_borders=False,
+		return_fill_count=True,
+		morphological_closing=False,
+	)
+
+	assert cts[1] == 0
+	assert np.all(res == labels)
+
+	res, cts = fastmorph.fill_holes(
+		labels, 
+		fix_borders=True,
+		return_fill_count=True,
+		morphological_closing=False,
+	)
+
+	assert cts[1] == np.count_nonzero(labels == 0)
+	assert np.all(res == 1)
+
+def test_complex_fill():
+	import crackle
+	labels = crackle.load("test_data/complex_soma.ckl.gz")
+	ans = crackle.load("test_data/complex_soma_result.ckl.gz")
+
+	res = fastmorph.fill_holes(
+		labels, 
+		remove_enclosed=True,
+		fix_borders=True,
+		morphological_closing=True,
+	)
+
+	assert np.all(res == ans)
+
 def test_spherical_open_close_run():
 	labels = np.zeros((10,10,10), dtype=bool)
 	res = fastmorph.spherical_open(labels, radius=1)
