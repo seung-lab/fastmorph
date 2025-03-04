@@ -265,6 +265,8 @@ def fill_holes(
   return_fill_count:bool = False,
   remove_enclosed:bool = False,
   return_removed:bool = False,
+  fix_borders:bool = False,
+  morphological_close:bool = False,
 ) -> np.ndarray:
   """
   For fill holes in toplogically closed objects.
@@ -280,7 +282,7 @@ def fill_holes(
   Return value: (filled_labels, fill_count (if specified), removed_set (if specified))
   """
   assert np.issubdtype(labels.dtype, np.integer) or np.issubdtype(labels.dtype, bool), "fill_holes is currently only supported for integer or binary images."
-  if np.issubdtype(labels.dtype, bool):
+  if np.issubdtype(labels.dtype, bool) and not fix_borders and not morphological_close:
     filled_labels, filled_ct = fill_voids.fill(labels, return_fill_count=True)
     ret = [ filled_labels ]
     if return_fill_count:
@@ -309,10 +311,30 @@ def fill_holes(
       continue
 
     binary_image = (cc_labels[slices] == label)
-    binary_image, pixels_filled = fill_voids.fill(
+
+    pixels_filled = 0
+
+    if morphological_close:
+      binary_image = dilate(binary_image)
+
+    if fix_borders:
+      binary_image[:,:,0], pf1 = fill_voids.fill(binary_image[:,:,0], return_fill_count=True)
+      binary_image[:,:,-1], pf2 = fill_voids.fill(binary_image[:,:,-1], return_fill_count=True)
+      binary_image[:,0,:], pf3 = fill_voids.fill(binary_image[:,0,:], return_fill_count=True)
+      binary_image[:,-1,:], pf4 = fill_voids.fill(binary_image[:,-1,:], return_fill_count=True)
+      binary_image[0,:,:], pf5 = fill_voids.fill(binary_image[0,:,:], return_fill_count=True)
+      binary_image[-1,:,:], pf6 = fill_voids.fill(binary_image[-1,:,:], return_fill_count=True)
+      pixels_filled += pf1 + pf2 + pf3 + pf4 + pf5 + pf6
+
+    binary_image, pf7 = fill_voids.fill(
       binary_image, in_place=True, 
       return_fill_count=True
     )
+    pixels_filled += pf7
+
+    if morphological_close:
+      binary_image = erode(binary_image, erode_border=False)
+
     fill_counts[label] = pixels_filled
     output[slices][binary_image] = mapping[label]
 
