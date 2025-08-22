@@ -296,7 +296,6 @@ def fill_holes(
 
   renumbered_labels, mapping = fastremap.renumber(labels)
   mapping = { v:k for k,v in mapping.items() }
-  N = len(mapping)
 
   if renumbered_labels.dtype == bool:
     renumbered_labels = renumbered_labels.view(np.uint8)
@@ -305,6 +304,8 @@ def fill_holes(
     renumbered_labels = renumbered_labels[...,0]
 
   stats = cc3d.statistics(renumbered_labels)
+
+  N = len(stats["voxel_counts"])
 
   fill_counts = {}
   all_slices = stats["bounding_boxes"]
