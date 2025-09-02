@@ -267,6 +267,7 @@ def fill_holes(
   return_removed:bool = False,
   fix_borders:bool = False,
   morphological_closing:bool = False,
+  in_place:bool = False,
 ) -> np.ndarray:
   """
   For fill holes in toplogically closed objects.
@@ -294,7 +295,7 @@ def fill_holes(
       ret.append(set())
     return (ret[0] if len(ret) == 1 else tuple(ret))
 
-  renumbered_labels, mapping = fastremap.renumber(labels)
+  renumbered_labels, mapping = fastremap.renumber(labels, in_place=in_place)
   mapping = { v:k for k,v in mapping.items() }
 
   if renumbered_labels.dtype == bool:
