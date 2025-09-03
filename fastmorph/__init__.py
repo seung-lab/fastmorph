@@ -368,7 +368,10 @@ def fill_holes(
       if pixels_filled == 0:
         continue
 
-      mask = renumbered_labels[slices][binary_image]
+
+      flat_binary_image = binary_image.ravel('F')
+      flat_renumber = renumbered_labels[slices].ravel('F')
+      mask = flat_renumber[flat_binary_image]
       sub_labels, sub_counts = fastremap.unique(mask, return_counts=True)
 
       if morphological_closing:
