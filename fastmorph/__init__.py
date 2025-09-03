@@ -286,6 +286,8 @@ def fill_holes(
   fix_borders: run 2d fill along the edges of the image on each binary image
   morphological_closing: perform a dilation first, and then erode at the end
     of the hole filling process
+  in_place: allow modifications of labels array for reduced memory consumption
+  progress: display a progress bar
 
   Return value: (filled_labels, fill_count (if specified), removed_set (if specified))
   """
