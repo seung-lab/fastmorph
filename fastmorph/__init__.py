@@ -352,7 +352,7 @@ def fill_holes(
 
       binary_image, pf7 = fill_voids.fill(
         binary_image, in_place=True, 
-        return_fill_count=True
+        return_fill_count=True,
       )
       pixels_filled += pf7
 
@@ -381,11 +381,11 @@ def fill_holes(
       if pixels_filled == 0:
         continue
 
-
       flat_binary_image = binary_image.ravel('F')
       flat_renumber = renumbered_labels[slices].ravel('F')
       mask = flat_renumber[flat_binary_image]
       sub_labels, sub_counts = fastremap.unique(mask, return_counts=True)
+      del mask
 
       if morphological_closing:
         sub_counts = { l:c for l,c in zip(sub_labels, sub_counts) }
