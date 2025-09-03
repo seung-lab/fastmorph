@@ -1,11 +1,14 @@
 from enum import Enum
 from typing import Optional, Sequence
+
 import numpy as np
 import edt
 import fill_voids
 import cc3d
 import fastremap
 import multiprocessing as mp
+
+from tqdm import trange
 
 import fastmorphops
 
@@ -268,6 +271,7 @@ def fill_holes(
   fix_borders:bool = False,
   morphological_closing:bool = False,
   in_place:bool = False,
+  progress:bool = False,
 ) -> np.ndarray:
   """
   For fill holes in toplogically closed objects.
@@ -314,67 +318,72 @@ def fill_holes(
 
   output = np.zeros(labels.shape, dtype=labels.dtype, order="F")
 
-  removed_set = set()  
-  for label in range(1, N):
-    if label in removed_set:
-      continue
+  removed_set = set()
 
-    slices = all_slices[label]
-    if slices is None:
-      continue
+  with trange(1, N, disable=(not progress), desc="Filling Holes") as pbar:
+    for label in pbar:
+      if label in removed_set:
+        continue
 
-    binary_image = (renumbered_labels[slices] == label)
+      slices = all_slices[label]
+      if slices is None:
+        continue
 
-    pixels_filled = 0
+      pbar.set_postfix(label=str(mapping[label]))
 
-    if morphological_closing:
-      dilated_binary_image = dilate(binary_image)
-      pixels_filled += np.sum(dilated_binary_image != binary_image)
-      binary_image = dilated_binary_image
-      del dilated_binary_image
+      binary_image = (renumbered_labels[slices] == label)
 
-    if fix_borders:
-      binary_image[:,:,0], pf1 = fill_voids.fill(binary_image[:,:,0], return_fill_count=True)
-      binary_image[:,:,-1], pf2 = fill_voids.fill(binary_image[:,:,-1], return_fill_count=True)
-      binary_image[:,0,:], pf3 = fill_voids.fill(binary_image[:,0,:], return_fill_count=True)
-      binary_image[:,-1,:], pf4 = fill_voids.fill(binary_image[:,-1,:], return_fill_count=True)
-      binary_image[0,:,:], pf5 = fill_voids.fill(binary_image[0,:,:], return_fill_count=True)
-      binary_image[-1,:,:], pf6 = fill_voids.fill(binary_image[-1,:,:], return_fill_count=True)
-      pixels_filled += pf1 + pf2 + pf3 + pf4 + pf5 + pf6
+      pixels_filled = 0
 
-    binary_image, pf7 = fill_voids.fill(
-      binary_image, in_place=True, 
-      return_fill_count=True
-    )
-    pixels_filled += pf7
+      if morphological_closing:
+        dilated_binary_image = dilate(binary_image)
+        pixels_filled += np.sum(dilated_binary_image != binary_image)
+        binary_image = dilated_binary_image
+        del dilated_binary_image
 
-    if morphological_closing:
-      eroded_binary_image = erode(binary_image, erode_border=False)
-      pixels_filled -= np.sum(eroded_binary_image != binary_image)
-      binary_image = eroded_binary_image
-      del eroded_binary_image
+      if fix_borders:
+        binary_image[:,:,0], pf1 = fill_voids.fill(binary_image[:,:,0], return_fill_count=True)
+        binary_image[:,:,-1], pf2 = fill_voids.fill(binary_image[:,:,-1], return_fill_count=True)
+        binary_image[:,0,:], pf3 = fill_voids.fill(binary_image[:,0,:], return_fill_count=True)
+        binary_image[:,-1,:], pf4 = fill_voids.fill(binary_image[:,-1,:], return_fill_count=True)
+        binary_image[0,:,:], pf5 = fill_voids.fill(binary_image[0,:,:], return_fill_count=True)
+        binary_image[-1,:,:], pf6 = fill_voids.fill(binary_image[-1,:,:], return_fill_count=True)
+        pixels_filled += pf1 + pf2 + pf3 + pf4 + pf5 + pf6
 
-    fill_counts[label] = pixels_filled
-    output[slices][binary_image] = mapping[label]
+      binary_image, pf7 = fill_voids.fill(
+        binary_image, in_place=True, 
+        return_fill_count=True
+      )
+      pixels_filled += pf7
 
-    if pixels_filled == 0:
-      continue
+      if morphological_closing:
+        eroded_binary_image = erode(binary_image, erode_border=False)
+        pixels_filled -= np.sum(eroded_binary_image != binary_image)
+        binary_image = eroded_binary_image
+        del eroded_binary_image
 
-    sub_labels, sub_counts = fastremap.unique(renumbered_labels[slices][binary_image], return_counts=True)
+      fill_counts[label] = pixels_filled
+      output[slices][binary_image] = mapping[label]
 
-    if morphological_closing:
-      sub_counts = { l:c for l,c in zip(sub_labels, sub_counts) }
-      sub_labels = set([ lbl for lbl in sub_labels if sub_counts[lbl] == total_counts[lbl] ])
-    else:
-      sub_labels = set(sub_labels)
+      if pixels_filled == 0:
+        continue
 
-    sub_labels.discard(label)
-    sub_labels.discard(0)
-    if not remove_enclosed and sub_labels:
-      sub_labels = [ int(l) for l in sub_labels ]
-      raise FillError(f"{sub_labels} would have been deleted by this operation.")
+      mask = renumbered_labels[slices][binary_image]
+      sub_labels, sub_counts = fastremap.unique(mask, return_counts=True)
 
-    removed_set |= sub_labels
+      if morphological_closing:
+        sub_counts = { l:c for l,c in zip(sub_labels, sub_counts) }
+        sub_labels = set([ lbl for lbl in sub_labels if sub_counts[lbl] == total_counts[lbl] ])
+      else:
+        sub_labels = set(sub_labels)
+
+      sub_labels.discard(label)
+      sub_labels.discard(0)
+      if not remove_enclosed and sub_labels:
+        sub_labels = [ int(l) for l in sub_labels ]
+        raise FillError(f"{sub_labels} would have been deleted by this operation.")
+
+      removed_set |= sub_labels
 
   ret = [ output ]
 
