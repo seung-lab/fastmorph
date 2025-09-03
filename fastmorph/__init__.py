@@ -363,7 +363,20 @@ def fill_holes(
         del eroded_binary_image
 
       fill_counts[label] = pixels_filled
-      output[slices][binary_image] = mapping[label]
+
+      # This function call is equivalent to:
+      # output[slices][binary_image] = mapping[label]
+      # 
+      # It avoids an Fortran vs C order impedance mismatch
+      # that was causing a large performance hit.
+      fastmorphops.draw_with_mask_f_order(
+        output, 
+        int(slices[0].start), int(slices[0].stop),
+        int(slices[1].start), int(slices[1].stop),
+        int(slices[2].start), int(slices[2].stop),
+        binary_image,
+        mapping[label]
+      )
 
       if pixels_filled == 0:
         continue

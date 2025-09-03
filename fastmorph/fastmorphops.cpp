@@ -281,10 +281,54 @@ py::array grey_erode(const py::array &labels, const uint64_t threads) {
 
 #undef DISPATCH_TO_TYPES
 
+// avoid numpy behavior that draws in C order 
+// which severely impacts performance
+template <typename T>
+void draw_with_mask_f_order(
+	const py::array_t<T> &output,
+	const uint64_t x_start, const uint64_t x_end,
+	const uint64_t y_start, const uint64_t y_end,
+	const uint64_t z_start, const uint64_t z_end,
+	const py::array_t<bool>& binary_image,
+	const int64_t value
+) {
+	const uint64_t sx = output.shape()[0];
+	const uint64_t sy = output.shape()[1];
+
+    auto buf = output.request();  // buffer info
+    auto ptr = static_cast<T*>(buf.ptr);
+
+    auto binary_buf = binary_image.request();
+    const bool* bool_ptr = static_cast<const bool*>(binary_buf.ptr);
+
+    uint64_t i = 0;
+	for (uint64_t z = z_start; z < z_end; z++) {
+		for (uint64_t y = y_start; y < y_end; y++) {
+			for (uint64_t x = x_start; x < x_end; x++, i++) {
+				uint64_t loc = x + sx * (y + sy * z);
+				if (bool_ptr[i]) {
+					ptr[loc] = value;
+				}
+			}
+		}
+	}
+}
+
 PYBIND11_MODULE(fastmorphops, m) {
 	m.doc() = "Accelerated fastmorph functions."; 
 	m.def("multilabel_dilate", &multilabel_dilate, "Morphological dilation of a multilabel volume using mode of a 3x3x3 structuring element.");
 	m.def("grey_dilate", &grey_dilate, "Morphological dilation of a grayscale volume using max of a 3x3x3 structuring element.");
 	m.def("multilabel_erode", &multilabel_erode, "Morphological erosion of a multilabel volume using edge contacts of a 3x3x3 structuring element.");
 	m.def("grey_erode", &grey_erode, "Morphological erosion of a grayscale volume using min of a 3x3x3 structuring element.");
+	
+	// Performance optimization for output[slices][boolean_image] = value
+
+	m.def("draw_with_mask_f_order", &draw_with_mask_f_order<uint8_t>);
+	m.def("draw_with_mask_f_order", &draw_with_mask_f_order<uint16_t>);
+	m.def("draw_with_mask_f_order", &draw_with_mask_f_order<uint32_t>);
+	m.def("draw_with_mask_f_order", &draw_with_mask_f_order<uint64_t>);
+	m.def("draw_with_mask_f_order", &draw_with_mask_f_order<int8_t>);
+	m.def("draw_with_mask_f_order", &draw_with_mask_f_order<int16_t>);
+	m.def("draw_with_mask_f_order", &draw_with_mask_f_order<int32_t>);
+	m.def("draw_with_mask_f_order", &draw_with_mask_f_order<int64_t>);
 }
