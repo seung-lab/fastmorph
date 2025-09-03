@@ -339,7 +339,8 @@ def fill_holes(
 
       if morphological_closing:
         dilated_binary_image = dilate(binary_image)
-        pixels_filled += np.sum(dilated_binary_image != binary_image)
+        # pixels_filled += np.sum(dilated_binary_image != binary_image)
+        pixels_filled += fastmorphops.count_differences(dilated_binary_image, binary_image)
         binary_image = dilated_binary_image
         del dilated_binary_image
 
@@ -360,7 +361,8 @@ def fill_holes(
 
       if morphological_closing:
         eroded_binary_image = erode(binary_image, erode_border=False)
-        pixels_filled -= np.sum(eroded_binary_image != binary_image)
+        # pixels_filled -= np.sum(eroded_binary_image != binary_image)
+        pixels_filled -= fastmorphops.count_differences(eroded_binary_image, binary_image)
         binary_image = eroded_binary_image
         del eroded_binary_image
 

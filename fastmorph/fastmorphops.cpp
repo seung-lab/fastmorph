@@ -314,6 +314,28 @@ void draw_with_mask_f_order(
 	}
 }
 
+uint64_t count_differences(
+	const py::array_t<bool> &img1,
+	const py::array_t<bool>& img2
+) {
+    auto buf1 = img1.request(); // buffer info
+    auto ptr1 = static_cast<uint8_t*>(buf1.ptr);
+
+    auto buf2 = img2.request(); // buffer info
+    auto ptr2 = static_cast<uint8_t*>(buf2.ptr);
+
+    const uint64_t size = img1.size();
+	uint64_t count = 0;
+
+    for (uint64_t i = 0; i < size; i++) {
+    	count += (ptr1[i] != ptr2[i]);
+    }
+
+    return count;
+}
+
+
+
 PYBIND11_MODULE(fastmorphops, m) {
 	m.doc() = "Accelerated fastmorph functions."; 
 	m.def("multilabel_dilate", &multilabel_dilate, "Morphological dilation of a multilabel volume using mode of a 3x3x3 structuring element.");
@@ -331,4 +353,6 @@ PYBIND11_MODULE(fastmorphops, m) {
 	m.def("draw_with_mask_f_order", &draw_with_mask_f_order<int16_t>);
 	m.def("draw_with_mask_f_order", &draw_with_mask_f_order<int32_t>);
 	m.def("draw_with_mask_f_order", &draw_with_mask_f_order<int64_t>);
+
+	m.def("count_differences", &count_differences);
 }
