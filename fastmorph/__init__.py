@@ -272,6 +272,7 @@ def fill_holes(
   morphological_closing:bool = False,
   in_place:bool = False,
   progress:bool = False,
+  parallel:int = 0,
 ) -> np.ndarray:
   """
   For fill holes in toplogically closed objects.
@@ -338,7 +339,7 @@ def fill_holes(
       pixels_filled = 0
 
       if morphological_closing:
-        dilated_binary_image = dilate(binary_image)
+        dilated_binary_image = dilate(binary_image, parallel=parallel)
         # pixels_filled += np.sum(dilated_binary_image != binary_image)
         pixels_filled += fastmorphops.count_differences(dilated_binary_image, binary_image)
         binary_image = dilated_binary_image
@@ -360,7 +361,7 @@ def fill_holes(
       pixels_filled += pf7
 
       if morphological_closing:
-        eroded_binary_image = erode(binary_image, erode_border=False)
+        eroded_binary_image = erode(binary_image, erode_border=False, parallel=parallel)
         # pixels_filled -= np.sum(eroded_binary_image != binary_image)
         pixels_filled -= fastmorphops.count_differences(eroded_binary_image, binary_image)
         binary_image = eroded_binary_image
