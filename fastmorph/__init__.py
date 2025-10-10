@@ -423,21 +423,10 @@ def fill_holes(
 def fill_holes_multilabel(
   labels:np.ndarray, 
   anisotropy:tuple[float,float,float] = (1.0,1.0,1.0),
-  morphological_closing:bool = False,
 ) -> tuple[np.ndarray, set[int]]:
 
-  if morphological_closing:
-    labels = closing(
-      labels, 
-      mode=Mode.multilabel, 
-      background_only=True, 
-      erode_border=False
-    )
-
   # Ensure bg 0 gets treated as a connected component
-  labels += 1
-  cc_labels, N = cc3d.connected_components(labels, return_N=True, connectivity=26)
-  labels -= 1
+  cc_labels, N = cc3d.connected_components(labels + 1, return_N=True, connectivity=26)
 
   surface_areas = cc3d.contacts(
     cc_labels, 
