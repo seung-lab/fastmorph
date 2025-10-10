@@ -423,8 +423,17 @@ def fill_holes(
 @profile
 def fill_holes_multilabel(
   labels:np.ndarray, 
-  anisotropy:tuple[float,float,float] = (1.0,1.0,1.0)
+  anisotropy:tuple[float,float,float] = (1.0,1.0,1.0),
+  morphological_closing:bool = False,
 ) -> tuple[np.ndarray, set[int]]:
+
+  if morphological_closing:
+    labels = closing(
+      labels, 
+      mode=Mode.multilabel, 
+      background_only=True, 
+      erode_border=False
+    )
 
   # Ensure bg 0 gets treated as a connected component
   labels += 1
