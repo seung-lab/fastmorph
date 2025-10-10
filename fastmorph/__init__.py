@@ -458,7 +458,7 @@ def fill_holes_multilabel(
 
   for slc in slices:
     slice_labels = cc_labels[slc]
-    sa = cc3d.contacts(slice_labels, connectivity=8)
+    sa = cc3d.contacts(slice_labels, connectivity=4)
     connections2d = pairs_to_connection_list(sa.keys())
     holes2d = []
     for segid, neighbors in connections2d.items():
