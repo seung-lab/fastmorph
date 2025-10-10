@@ -463,6 +463,7 @@ def fill_holes_multilabel(
     holes2d = []
     for segid, neighbors in connections2d.items():
       neighbors.discard(0)
+      neighbors = [ n for n in neighbors if sa[tuple(sorted([ segid, n ]))] > 7 ]
       if len(neighbors) == 1:
         holes2d.append(segid)
 
