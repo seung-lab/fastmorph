@@ -345,6 +345,7 @@ PYBIND11_MODULE(fastmorphops, m) {
 	
 	// Performance optimization for output[slices][boolean_image] = value
 
+	m.def("draw_with_mask_f_order", &draw_with_mask_f_order<bool>);
 	m.def("draw_with_mask_f_order", &draw_with_mask_f_order<uint8_t>);
 	m.def("draw_with_mask_f_order", &draw_with_mask_f_order<uint16_t>);
 	m.def("draw_with_mask_f_order", &draw_with_mask_f_order<uint32_t>);
