@@ -420,7 +420,6 @@ def fill_holes(
 
   return (ret[0] if len(ret) == 1 else tuple(ret))
 
-@profile
 def fill_holes_multilabel(
   labels:np.ndarray, 
   anisotropy:tuple[float,float,float] = (1.0,1.0,1.0),
