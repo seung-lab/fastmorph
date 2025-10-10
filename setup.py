@@ -20,7 +20,7 @@ else:
 
 setuptools.setup(
   name="fastmorph",
-  version="1.6.0",
+  version="1.6.1",
   setup_requires=["numpy","pybind11"],
   install_requires=[
     'connected-components-3d', 
