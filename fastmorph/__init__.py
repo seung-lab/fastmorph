@@ -1,3 +1,4 @@
+from collections import defaultdict
 from enum import Enum
 from typing import Optional, Sequence
 
@@ -418,4 +419,106 @@ def fill_holes(
     ret.append(removed_set)
 
   return (ret[0] if len(ret) == 1 else tuple(ret))
+
+@profile
+def fill_holes_multilabel(
+  labels:np.ndarray, 
+  anisotropy:tuple[float,float,float] = (1.0,1.0,1.0)
+) -> tuple[np.ndarray, set[int]]:
+
+  # Ensure bg 0 gets treated as a connected component
+  labels += 1
+  cc_labels, N = cc3d.connected_components(labels, return_N=True, connectivity=26)
+  labels -= 1
+
+  surface_areas = cc3d.contacts(
+    cc_labels, 
+    connectivity=26, 
+    surface_area=True, 
+    anisotropy=anisotropy,
+  )
+
+  def pairs_to_connection_list(itr):
+    tmp = defaultdict(set)
+    for l1, l2 in itr:
+      tmp[l1].add(l2)
+      tmp[l2].add(l1)
+    return tmp
+
+  connections = pairs_to_connection_list(surface_areas.keys())
+
+  candidate_holes = set(range(1,N+1))
+  edge_labels = set()
+
+  slices = [
+    np.s_[:,:,0],
+    np.s_[:,:,-1],
+    np.s_[0,:,:],
+    np.s_[-1,:,:],
+    np.s_[:,0,:],
+    np.s_[:,-1,:],
+  ]
+
+  for slc in slices:
+    slice_labels = cc_labels[slc]
+    sa = cc3d.contacts(slice_labels, connectivity=8)
+    connections2d = pairs_to_connection_list(sa.keys())
+    holes2d = []
+    for segid, neighbors in connections2d.items():
+      neighbors.discard(0)
+      if len(neighbors) == 1:
+        holes2d.append(segid)
+
+    uniq = set(fastremap.unique(slice_labels))
+    uniq -= set(holes2d)
+    edge_labels.update(uniq)
+
+  del uniq
+  del slice_labels
+  del connections2d
+
+  holes = candidate_holes.difference(edge_labels)
+
+  sentinel = np.iinfo(labels.dtype).max
+
+  orig_map = fastremap.component_map(cc_labels, labels)
+  orig_map[0] = 0
+  orig_map[sentinel] = sentinel
+
+  def best_contact(edges):
+    if not len(edges):
+      return sentinel
+
+    contact_surfaces = [ 
+      (contact, surface_areas[tuple(sorted((hole, contact)))]) 
+      for contact in edges
+    ]
+    contact_surfaces.sort(key=lambda x: x[1])
+    return contact_surfaces[-1][0]
+
+  remap = { i:i for i in range(N+1) }
+
+  for hole in holes:
+    if len(connections[hole]):
+      edges = connections[hole].intersection(edge_labels)
+      if not len(edges):
+        edges = connections[hole]
+      remap[hole] = best_contact(edges)
+    else:
+      remap[hole] = 0
+
+  del connections
+  del edge_labels
+  del candidate_holes
+
+  remap = { k: orig_map[v] for k,v in remap.items()  }
+
+  filled_labels = fastremap.remap(
+    cc_labels, remap, in_place=True
+  ).astype(labels.dtype, copy=False)
+
+  holes = [ orig_map[hole] for hole in holes ]
+  holes.sort()
+
+  return (filled_labels, holes)
 
