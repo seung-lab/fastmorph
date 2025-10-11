@@ -420,32 +420,83 @@ def fill_holes(
 
   return (ret[0] if len(ret) == 1 else tuple(ret))
 
-def fill_holes_multilabel(
-  labels:np.ndarray, 
-  anisotropy:tuple[float,float,float] = (1.0,1.0,1.0),
-) -> tuple[np.ndarray, set[int]]:
+def _pairs_to_connection_list(itr):
+  tmp = defaultdict(set)
+  for l1, l2 in itr:
+    tmp[l1].add(l2)
+    tmp[l2].add(l1)
+  return tmp
+
+def _fix_holes_2d(slice_labels:np.ndarray, merge_threshold:float) -> set[int]:
+
+  holes2d = set()
+  edge_surface_area = cc3d.contacts(slice_labels, connectivity=4)
+  connections2d = _pairs_to_connection_list(edge_surface_area.keys())      
+
+  slices2d = [
+    np.s_[0,:], np.s_[-1,:],
+    np.s_[:,0], np.s_[:,-1],
+  ]
+
+  # The edges of the slice are touching other borders and
+  # it is impossible to say if they are holes or not so
+  # protect those labels that touch the edge
+  protected = set()
+  for slc in slices2d:
+    protected.update(fastremap.unique(slice_labels[slc]))
+
+  for segid, neighbors in connections2d.items():
+    neighbors.discard(0)
+    neighbors = [ 
+      (n, edge_surface_area[tuple(sorted([ segid, n ]))]) 
+      for n in neighbors
+    ]
+    total_edge_area = sum([ x[1] for x in neighbors ])
+
+    if total_edge_area == 0:
+      continue
+
+    neighbors = [ 
+      n for n, area in neighbors 
+      if (area/total_edge_area) >= merge_threshold 
+    ]
+
+    if len(neighbors) == 1:
+      holes2d.add(segid)
+    holes2d -= protected
+
+  return holes2d
+
+def fill_holes_v2(
+  labels:np.ndarray,
+  fix_borders:bool = False,
+  merge_threshold:float = 1.0,
+  anisotropy:tuple[float,float,float] = (1.0, 1.0, 1.0),
+  parallel:int = 0,
+) -> tuple["CrackleArray", "CrackleArray"]:
+  import crackle
 
   # Ensure bg 0 gets treated as a connected component
-  cc_labels, N = cc3d.connected_components(labels + 1, return_N=True, connectivity=26)
+  cc_labels, N = cc3d.connected_components(
+    labels + 1, 
+    return_N=True, 
+    connectivity=26,
+  )
+
+  sentinel = np.iinfo(labels.dtype).max
+
+  orig_map = fastremap.component_map(cc_labels, labels)
+  orig_map[0] = 0
+  orig_map[sentinel] = sentinel
 
   surface_areas = cc3d.contacts(
     cc_labels, 
     connectivity=26, 
     surface_area=True, 
-    anisotropy=anisotropy,
+    anisotropy=tuple(anisotropy),
   )
 
-  def pairs_to_connection_list(itr):
-    tmp = defaultdict(set)
-    for l1, l2 in itr:
-      tmp[l1].add(l2)
-      tmp[l2].add(l1)
-    return tmp
-
-  connections = pairs_to_connection_list(surface_areas.keys())
-
-  candidate_holes = set(range(1,N+1))
-  edge_labels = set()
+  connections = _pairs_to_connection_list(surface_areas.keys())
 
   slices = [
     np.s_[:,:,0],
@@ -456,32 +507,32 @@ def fill_holes_multilabel(
     np.s_[:,-1,:],
   ]
 
+  edge_labels = set()
+  bg_edge_labels = set()
+
   for slc in slices:
     slice_labels = cc_labels[slc]
-    sa = cc3d.contacts(slice_labels, connectivity=4)
-    connections2d = pairs_to_connection_list(sa.keys())
-    holes2d = []
-    for segid, neighbors in connections2d.items():
-      neighbors.discard(0)
-      neighbors = [ n for n in neighbors if sa[tuple(sorted([ segid, n ]))] > 7 ]
-      if len(neighbors) == 1:
-        holes2d.append(segid)
-
     uniq = set(fastremap.unique(slice_labels))
-    uniq -= set(holes2d)
+
+    for u in uniq:
+      if orig_map[u] == 0:
+        bg_edge_labels.add(u)
+
+    if fix_borders:
+      uniq -= _fix_holes_2d(slice_labels, merge_threshold)
+
     edge_labels.update(uniq)
+
+  for bgl in bg_edge_labels:
+    for lbl in connections[bgl]:
+      edge_labels.add(lbl)
 
   del uniq
   del slice_labels
-  del connections2d
 
+  candidate_holes = set(range(1,N+1))
   holes = candidate_holes.difference(edge_labels)
-
-  sentinel = np.iinfo(labels.dtype).max
-
-  orig_map = fastremap.component_map(cc_labels, labels)
-  orig_map[0] = 0
-  orig_map[sentinel] = sentinel
+  del candidate_holes
 
   def best_contact(edges):
     if not len(edges):
@@ -491,8 +542,22 @@ def fill_holes_multilabel(
       (contact, surface_areas[tuple(sorted((hole, contact)))]) 
       for contact in edges
     ]
+    total_area = sum([ x[1] for x in contact_surfaces ])
+    
+    if total_area == 0:
+      if len(contact_surfaces) == 1:
+        return contact_surfaces[0][0]
+      else:
+        return 0
+
     contact_surfaces.sort(key=lambda x: x[1])
-    return contact_surfaces[-1][0]
+    max_contact, max_area = contact_surfaces[-1]
+    max_area /= total_area
+
+    if max_area >= merge_threshold:
+      return max_contact
+    else:
+      return 0
 
   remap = { i:i for i in range(N+1) }
 
@@ -507,16 +572,15 @@ def fill_holes_multilabel(
 
   del connections
   del edge_labels
-  del candidate_holes
 
   remap = { k: orig_map[v] for k,v in remap.items()  }
 
   filled_labels = fastremap.remap(
-    cc_labels, remap, in_place=True
+    cc_labels, remap, in_place=False,
   ).astype(labels.dtype, copy=False)
+  del remap
 
-  holes = [ orig_map[hole] for hole in holes ]
-  holes.sort()
+  hole_labels = fastremap.mask_except(cc_labels, list(holes))
+  hole_labels = np.where(hole_labels, labels, 0)
 
-  return (filled_labels, holes)
-
+  return (filled_labels, hole_labels)
