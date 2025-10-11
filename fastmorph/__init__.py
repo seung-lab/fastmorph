@@ -1,3 +1,5 @@
+from typing import Union
+
 from collections import defaultdict
 from enum import Enum
 from typing import Optional, Sequence
@@ -473,7 +475,8 @@ def fill_holes_v2(
   merge_threshold:float = 1.0,
   anisotropy:tuple[float,float,float] = (1.0, 1.0, 1.0),
   parallel:int = 0,
-) -> tuple["CrackleArray", "CrackleArray"]:
+  return_crackle:bool = False,
+) -> Union[tuple[np.ndarray, np.ndarray], tuple["CrackleArray", "CrackleArray"]]:
   import crackle
 
   # Ensure bg 0 gets treated as a connected component
@@ -540,6 +543,8 @@ def fill_holes_v2(
   del uniq
   del slice_labels
 
+  cc_labels = crackle.compressa(cc_labels, parallel=parallel)
+
   candidate_holes = set(range(1,N+1))
   holes = candidate_holes.difference(edge_labels)
   del candidate_holes
@@ -585,12 +590,11 @@ def fill_holes_v2(
 
   remap = { k: orig_map[v] for k,v in remap.items()  }
 
-  filled_labels = fastremap.remap(
-    cc_labels, remap, in_place=False,
-  ).astype(labels.dtype, copy=False)
-  del remap
+  filled_labels = cc_labels.remap(remap).astype(labels.dtype)
+  hole_labels = cc_labels.mask_except(list(holes))
+  hole_labels = hole_labels.remap(orig_map).astype(labels.dtype)
 
-  hole_labels = fastremap.mask_except(cc_labels, list(holes))
-  hole_labels = np.where(hole_labels, labels, 0)
-
-  return (filled_labels, hole_labels)
+  if return_crackle:
+    return (filled_labels, hole_labels)
+  else:
+    return (filled_labels.numpy(), hole_labels.numpy())
