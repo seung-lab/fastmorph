@@ -477,11 +477,20 @@ def fill_holes_v2(
   import crackle
 
   # Ensure bg 0 gets treated as a connected component
-  cc_labels, N = cc3d.connected_components(
-    labels + 1, 
-    return_N=True, 
-    connectivity=26,
-  )
+  if labels.flags.writeable:
+    labels += 1
+    cc_labels, N = cc3d.connected_components(
+      labels, 
+      return_N=True, 
+      connectivity=26,
+    )
+    labels -= 1
+  else:
+    cc_labels, N = cc3d.connected_components(
+      labels + 1, 
+      return_N=True, 
+      connectivity=26,
+    )
 
   sentinel = np.iinfo(labels.dtype).max
 
