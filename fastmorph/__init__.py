@@ -534,7 +534,7 @@ def fill_holes_v2(
   holes = candidate_holes.difference(edge_labels)
   del candidate_holes
 
-  def best_contact(edges):
+  def best_contact(segid, edges):
     if not len(edges):
       return sentinel
 
@@ -548,7 +548,7 @@ def fill_holes_v2(
       if len(contact_surfaces) == 1:
         return contact_surfaces[0][0]
       else:
-        return 0
+        return segid
 
     contact_surfaces.sort(key=lambda x: x[1])
     max_contact, max_area = contact_surfaces[-1]
@@ -557,18 +557,18 @@ def fill_holes_v2(
     if max_area >= merge_threshold:
       return max_contact
     else:
-      return 0
+      return segid
 
   remap = { i:i for i in range(N+1) }
 
-  for hole in holes:
+  for hole in list(holes):
     if len(connections[hole]):
       edges = connections[hole].intersection(edge_labels)
       if not len(edges):
         edges = connections[hole]
-      remap[hole] = best_contact(edges)
+      remap[hole] = best_contact(hole, edges)
     else:
-      remap[hole] = 0
+      holes.discard(hole)
 
   del connections
   del edge_labels
