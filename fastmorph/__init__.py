@@ -525,7 +525,8 @@ def fill_holes_v2(
 
   for bgl in bg_edge_labels:
     for lbl in connections[bgl]:
-      edge_labels.add(lbl)
+      if surface_areas[tuple(sorted([bgl, lbl]))] > 0:
+        edge_labels.add(lbl)
 
   del uniq
   del slice_labels
