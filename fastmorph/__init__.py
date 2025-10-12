@@ -428,6 +428,8 @@ def fill_holes(
 
   return (ret[0] if len(ret) == 1 else tuple(ret))
 
+fill_holes_v1 = fill_holes
+
 def _pairs_to_connection_list(itr):
   tmp = defaultdict(set)
   for l1, l2 in itr:
