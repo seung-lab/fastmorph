@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Iterator
 
 from collections import defaultdict
 from enum import Enum
@@ -21,7 +21,7 @@ from tqdm import trange
 
 import fastmorphops
 
-AnisotropyType = Optional[Sequence[int]]
+AnisotropyType = Optional[Iterator[int]]
 
 class Mode(Enum):
   multilabel = 1
