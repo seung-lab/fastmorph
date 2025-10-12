@@ -477,6 +477,34 @@ def _fix_holes_2d(slice_labels:np.ndarray, merge_threshold:float) -> set[int]:
 
   return holes2d
 
+class DisjointSet:
+  def __init__(self, N, edge_labels):
+    self.data = { i:i for i in range(N+1) }
+    self.edge_labels = edge_labels
+  def add(self, x):
+    self.data[x] = x
+    return x
+  def find(self, x):
+    if not x in self.data:
+      return None
+    i = self.data[x]
+    while i != self.data[i]:
+      self.data[i] = self.data[self.data[i]]
+      i = self.data[i]
+    return i
+  def union(self, x, y):
+    i = self.find(x)
+    j = self.find(y)
+    if i is None:
+      i = self.add(x)
+    if j is None:
+      j = self.add(y)
+
+    if i in self.edge_labels:
+      self.data[j] = i
+    else:
+      self.data[i] = j
+
 def fill_holes_v2(
   labels:np.ndarray,
   fix_borders:bool = False,
@@ -582,13 +610,15 @@ def fill_holes_v2(
   holes = candidate_holes.difference(edge_labels)
   del candidate_holes
 
-  def best_contact(segid, edges):
-    if not len(edges):
+  equivalences = DisjointSet(N+1, edge_labels)
+
+  def best_contact(segid, neighbors):
+    if not len(neighbors):
       return sentinel
 
     contact_surfaces = [ 
       (contact, surface_areas[tuple(sorted((hole, contact)))]) 
-      for contact in edges
+      for contact in neighbors
     ]
     total_area = sum([ x[1] for x in contact_surfaces ])
     
@@ -607,21 +637,39 @@ def fill_holes_v2(
     else:
       return segid
 
-  remap = { i:i for i in range(N+1) }
-
   for hole in list(holes):
-    if len(connections[hole]):
-      edges = connections[hole].intersection(edge_labels)
-      if not len(edges):
-        edges = connections[hole]
-      remap[hole] = best_contact(hole, edges)
+    neighbors = connections[hole]
+
+    edges = neighbors.intersection(edge_labels)
+
+    if len(edges) <= 1:
+      edge = None
+      if len(edges) == 1:
+        edge = next(iter(edges))
+      for hn in neighbors.difference(edge_labels):
+        hne = connections[hn].intersection(edge_labels)
+        if len(hne) == 0:
+          equivalences.union(hole, hn)
+        elif len(hne) == 1:
+          if edge is None:
+            edge = next(iter(hne))
+          elif edge == next(iter(hne)):
+            equivalences.union(hole, hn)
+          else:
+            continue
+
+    if len(edges):
+      equivalences.union(hole, best_contact(hole, edges))
     else:
       holes.discard(hole)
 
   del connections
   del edge_labels
 
+  remap = { i: equivalences.find(i) for i in range(N+1) }
   remap = { k: orig_map[v] for k,v in remap.items()  }
+
+  del equivalences
 
   if HAS_CRACKLE:
     filled_labels = cc_labels.remap(remap).astype(labels.dtype)
