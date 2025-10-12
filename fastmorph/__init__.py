@@ -284,7 +284,7 @@ def fill_holes(
   parallel:int = 0,
 ) -> np.ndarray:
   """
-  For fill holes in toplogically closed objects.
+  For filling holes in toplogically closed objects.
 
   return_fill_count: return the total number of pixels filled in
     for boolean array: integer
@@ -483,6 +483,32 @@ def fill_holes_v2(
   parallel:int = 0,
   return_crackle:bool = False,
 ) -> Union[tuple[np.ndarray, np.ndarray], tuple["CrackleArray", "CrackleArray"]]:
+  """
+  For filling holes in toplogically closed objects using a faster method
+  for multilabel objects.
+
+  NOTE: if crackle-codec is installed, this function will have reduced memory usage.
+
+  return_fill_count: return the total number of pixels filled in
+    for boolean array: integer
+    for integer array: { label: count }
+  fix_borders: along each edge of the image, consider labels that are totally
+    enclosed to be holes
+  anisotropy: distortion along each axis, used for calculating contact surfaces
+  merge_threshold: by default, only objects that are totally enclosed by a single
+    label are considered holes, but sometimes they peek out slightly (e.g. an
+    organelle touching the membrane of a cell). You can set merge_threshold from
+    0.0 to 1.0. This is the fraction of surface area that must be enclosed by a 
+    single label to be considered mergable. You probably want this to be set
+    above 0.85 at the outside (more likely above 0.95). Set it too low, and you'll 
+    introduce external mergers.
+  parallel: pass this value to any internal algorithms that support parallel operation
+  return_crackle: you can reduce memory usage by returning the outputs as compressed
+    CrackleArrays.
+
+  Return value: (filled_labels, hole_labels)
+  """
+
   # Ensure bg 0 gets treated as a connected component
   if labels.flags.writeable:
     labels += 1
