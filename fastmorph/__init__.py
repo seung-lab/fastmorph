@@ -512,7 +512,7 @@ def _true_label(
     for next_label in connections[label]:
       stack.append(next_label)
 
-  if merge_threshold < 1.0:
+  if merge_threshold > 0.0 and len(found_edges) > 1:
     areas = defaultdict(int)
     total_area = 0
 
