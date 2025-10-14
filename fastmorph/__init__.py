@@ -487,7 +487,7 @@ def _true_label(
 ) -> int:
   assert 0.0 <= merge_threshold <= 1.0
 
-  if hole in edges or merge_threshold == 0.0:
+  if hole in edges:
     return hole
 
   stack = [ hole ]
