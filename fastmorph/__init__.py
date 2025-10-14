@@ -663,8 +663,6 @@ def fill_holes_v2(
         continue
 
       for hole_i in group:
-        if hole_i == 643 or parent_label == 643:
-          import pdb; pdb.set_trace()
         remap[hole_i] = parent_label
   else:
     for hole in list(holes):
