@@ -477,6 +477,51 @@ def _fix_holes_2d(slice_labels:np.ndarray, merge_threshold:float) -> set[int]:
 
   return holes2d
 
+def _true_label(
+  hole:int, 
+  edges:set[int], 
+  connections:dict[int,list[int]],
+  visited:np.ndarray,
+  # merge_threshold:float,
+) -> int:
+  # assert 0.0 <= merge_threshold <= 1.0
+
+  if hole == 643:
+    import pdb; pdb.set_trace()
+
+  if hole in edges:
+    return hole
+
+  stack = [ hole ]
+  found_edges = set()
+  hole_group = set()
+
+  x = False
+  while stack:
+    label = stack.pop()
+    if label == 643: 
+      x = True
+
+    if label in edges:
+      found_edges.add(label)
+      visited[label] = True
+      continue
+
+    hole_group.add(label)
+
+    if visited[label]:
+      continue
+
+    visited[label] = True
+
+    for next_label in connections[label]:
+      stack.append(next_label)
+
+  if len(found_edges) == 1:
+    return next(iter(found_edges)), hole_group
+  
+  return hole, hole_group
+
 def fill_holes_v2(
   labels:np.ndarray,
   fix_borders:bool = False,
@@ -609,14 +654,27 @@ def fill_holes_v2(
 
   remap = { i:i for i in range(N+1) }
 
-  for hole in list(holes):
-    if len(connections[hole]):
-      edges = connections[hole].intersection(edge_labels)
-      if not len(edges):
-        edges = connections[hole]
-      remap[hole] = best_contact(hole, edges)
-    else:
-      holes.discard(hole)
+  if merge_threshold == 1.0:
+    visited = np.zeros(len(connections) + 1, dtype=bool)
+    for hole in tqdm(list(holes)):
+      parent_label, group = _true_label(hole, edge_labels, connections, visited)
+      if hole == parent_label:
+        holes.discard(hole)
+        continue
+
+      for hole_i in group:
+        if hole_i == 643 or parent_label == 643:
+          import pdb; pdb.set_trace()
+        remap[hole_i] = parent_label
+  else:
+    for hole in list(holes):
+      if len(connections[hole]):
+        edges = connections[hole].intersection(edge_labels)
+        if not len(edges):
+          edges = connections[hole]
+        remap[hole] = best_contact(hole, edges)
+      else:
+        holes.discard(hole)
 
   del connections
   del edge_labels
