@@ -493,11 +493,8 @@ def _true_label(
   found_edges = set()
   hole_group = set()
 
-  x = False
   while stack:
     label = stack.pop()
-    if label == 643: 
-      x = True
 
     if label in edges:
       found_edges.add(label)
@@ -559,14 +556,14 @@ def fill_holes_v2(
     cc_labels, N = cc3d.connected_components(
       labels, 
       return_N=True, 
-      connectivity=26,
+      connectivity=6,
     )
     labels -= 1
   else:
     cc_labels, N = cc3d.connected_components(
       labels + 1, 
       return_N=True, 
-      connectivity=26,
+      connectivity=6,
     )
 
   sentinel = np.iinfo(labels.dtype).max
@@ -577,7 +574,7 @@ def fill_holes_v2(
 
   surface_areas = cc3d.contacts(
     cc_labels, 
-    connectivity=26, 
+    connectivity=6, 
     surface_area=True, 
     anisotropy=tuple(anisotropy),
   )
