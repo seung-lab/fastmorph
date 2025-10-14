@@ -612,12 +612,12 @@ def fill_holes_v2(
     slice_labels = cc_labels[slc]
     uniq = set(fastremap.unique(slice_labels))
 
+    if fix_borders:
+      uniq -= _fix_holes_2d(slice_labels, merge_threshold)
+
     for u in uniq:
       if orig_map[u] == 0:
         bg_edge_labels.add(u)
-
-    if fix_borders:
-      uniq -= _fix_holes_2d(slice_labels, merge_threshold)
 
     edge_labels.update(uniq)
 
