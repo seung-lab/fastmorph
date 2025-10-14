@@ -486,9 +486,6 @@ def _true_label(
 ) -> int:
   # assert 0.0 <= merge_threshold <= 1.0
 
-  if hole == 643:
-    import pdb; pdb.set_trace()
-
   if hole in edges:
     return hole
 
