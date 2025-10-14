@@ -481,12 +481,13 @@ def _true_label(
   hole:int, 
   edges:set[int], 
   connections:dict[int,list[int]],
+  surface_areas:dict[tuple[int,int],float],
+  merge_threshold:float,
   visited:np.ndarray,
-  # merge_threshold:float,
 ) -> int:
-  # assert 0.0 <= merge_threshold <= 1.0
+  assert 0.0 <= merge_threshold <= 1.0
 
-  if hole in edges:
+  if hole in edges or merge_threshold == 0.0:
     return hole
 
   stack = [ hole ]
@@ -510,6 +511,20 @@ def _true_label(
 
     for next_label in connections[label]:
       stack.append(next_label)
+
+  if merge_threshold < 1.0:
+    areas = {}
+    total_area = 0
+
+    for edge in found_edges:
+      for hole_i in hole_group:
+        area = surface_areas[tuple(sorted([edge, hole_i]))]
+        areas[edge] += area
+        total_area += area
+
+    for edge in list(found_edges):
+      if areas[edge] / total_area < merge_threshold:
+        found_edges.discard(edge)
 
   if len(found_edges) == 1:
     return next(iter(found_edges)), hole_group
@@ -621,52 +636,21 @@ def fill_holes_v2(
   holes = candidate_holes.difference(edge_labels)
   del candidate_holes
 
-  def best_contact(segid, edges):
-    if not len(edges):
-      return sentinel
-
-    contact_surfaces = [ 
-      (contact, surface_areas[tuple(sorted((hole, contact)))]) 
-      for contact in edges
-    ]
-    total_area = sum([ x[1] for x in contact_surfaces ])
-    
-    if total_area == 0:
-      if len(contact_surfaces) == 1:
-        return contact_surfaces[0][0]
-      else:
-        return segid
-
-    contact_surfaces.sort(key=lambda x: x[1])
-    max_contact, max_area = contact_surfaces[-1]
-    max_area /= total_area
-
-    if max_area >= merge_threshold:
-      return max_contact
-    else:
-      return segid
-
   remap = { i:i for i in range(N+1) }
 
-  if merge_threshold == 1.0:
-    visited = np.zeros(len(connections) + 1, dtype=bool)
-    for hole in tqdm(list(holes)):
-      parent_label, group = _true_label(hole, edge_labels, connections, visited)
-      if hole == parent_label:
-        holes.discard(hole)
-        continue
+  visited = np.zeros(len(connections) + 1, dtype=bool)
+  for hole in tqdm(list(holes)):
+    parent_label, group = _true_label(
+      hole, edge_labels, 
+      connections, surface_areas, 
+      merge_threshold, visited,
+    )
+    if hole == parent_label:
+      holes.discard(hole)
+      continue
 
-      for hole_i in group:
-        remap[hole_i] = parent_label
-  else:
-    for hole in list(holes):
-      if len(connections[hole]):
-        edges = connections[hole].intersection(edge_labels)
-        if not len(edges):
-          edges = connections[hole]
-        remap[hole] = best_contact(hole, edges)
-      else:
-        holes.discard(hole)
+    for hole_i in group:
+      remap[hole_i] = parent_label
 
   del connections
   del edge_labels
