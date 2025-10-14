@@ -513,12 +513,12 @@ def _true_label(
       stack.append(next_label)
 
   if merge_threshold < 1.0:
-    areas = {}
+    areas = defaultdict(int)
     total_area = 0
 
     for edge in found_edges:
       for hole_i in hole_group:
-        area = surface_areas[tuple(sorted([edge, hole_i]))]
+        area = surface_areas.get(tuple(sorted([edge, hole_i])), 0)
         areas[edge] += area
         total_area += area
 
@@ -639,7 +639,7 @@ def fill_holes_v2(
   remap = { i:i for i in range(N+1) }
 
   visited = np.zeros(len(connections) + 1, dtype=bool)
-  for hole in tqdm(list(holes)):
+  for hole in list(holes):
     parent_label, group = _true_label(
       hole, edge_labels, 
       connections, surface_areas, 
