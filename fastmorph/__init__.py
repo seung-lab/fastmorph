@@ -564,6 +564,7 @@ def fill_holes_v2(
 
   Return value: (filled_labels, hole_labels)
   """
+  orig_dtype = labels.dtype
   if np.issubdtype(labels.dtype, bool):
     labels = labels.view(np.uint8)
 
@@ -660,9 +661,9 @@ def fill_holes_v2(
   remap = { k: orig_map[v] for k,v in remap.items()  }
 
   if HAS_CRACKLE:
-    filled_labels = cc_labels.remap(remap).astype(labels.dtype)
+    filled_labels = cc_labels.remap(remap).astype(orig_dtype)
     hole_labels = cc_labels.mask_except(list(holes))
-    hole_labels = hole_labels.remap(orig_map).astype(labels.dtype)
+    hole_labels = hole_labels.remap(orig_map).astype(orig_dtype)
 
     if return_crackle:
       return (filled_labels, hole_labels)
@@ -671,7 +672,7 @@ def fill_holes_v2(
   else:
     filled_labels = fastremap.remap(
       cc_labels, remap, in_place=False,
-    ).astype(labels.dtype, copy=False)
+    ).astype(orig_dtype, copy=False)
 
     hole_labels = fastremap.mask_except(cc_labels, list(holes))
     hole_labels = np.where(hole_labels, labels, 0)
