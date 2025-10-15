@@ -564,6 +564,8 @@ def fill_holes_v2(
 
   Return value: (filled_labels, hole_labels)
   """
+  if np.issubdtype(labels.dtype, bool):
+    labels = labels.view(np.uint8)
 
   # Ensure bg 0 gets treated as a connected component
   if labels.flags.writeable:
