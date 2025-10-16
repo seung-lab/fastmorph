@@ -531,6 +531,32 @@ def _true_label(
   
   return hole, hole_group
 
+def _fill_binary_image(
+  binary_image:np.ndarray,
+  fix_borders:bool,
+  return_crackle:bool,
+  parallel:int,
+):
+  if fix_borders:
+    binary_image[:,:,0] = fill_voids.fill(binary_image[:,:,0])
+    binary_image[:,:,-1] = fill_voids.fill(binary_image[:,:,-1])
+    binary_image[:,0,:] = fill_voids.fill(binary_image[:,0,:])
+    binary_image[:,-1,:] = fill_voids.fill(binary_image[:,-1,:])
+    binary_image[0,:,:] = fill_voids.fill(binary_image[0,:,:])
+    binary_image[-1,:,:] = fill_voids.fill(binary_image[-1,:,:])
+  
+  binary_image = fill_voids.fill(binary_image)
+
+  order = "F" if binary_image.flags.f_contiguous else "C"
+
+  if return_crackle:
+    filled = crackle.compressa(binary_image, parallel=parallel)
+    holes = crackle.CrackleArray(crackle.zeros(binary_image.shape, dtype=bool, order=order))
+    holes.parallel = parallel
+    return filled, holes
+
+  return binary_image, np.zeros(binary_image.shape, dtype=bool, order=order)
+
 def fill_holes_v2(
   labels:np.ndarray,
   fix_borders:bool = False,
@@ -566,6 +592,10 @@ def fill_holes_v2(
   """
   orig_dtype = labels.dtype
   if np.issubdtype(labels.dtype, bool):
+    # This is for speed, not because the below code is incorrect for bool
+    # merge_threshold does nothing for a binary image anyway, so ignore it.
+    return _fill_binary_image(labels, fix_borders, return_crackle, parallel)
+
     labels = labels.view(np.uint8)
 
   # Ensure bg 0 gets treated as a connected component
