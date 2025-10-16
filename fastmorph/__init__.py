@@ -569,13 +569,33 @@ def fill_holes_v2(
   For filling holes in toplogically closed objects using a faster method
   for multilabel objects.
 
+  Base Mulit-Label Fill Algorithm:
+
+    1. Color all 6-connected components (even background)
+    2. Compute surface area of adjacent regions (6-connected)
+    3. Compute connection list { label: [neighbor labels], ... }
+    4. Create a set of candidate holes from all connected components
+      and then filter them by the set difference with labels touching
+      the edges of the cutout.
+        - To account for e.g. a foreground object surrounded by 
+          background, also label as edges all objects touching
+          background that touches the image border.
+    5. For each hole, walk through the region graph to identify 
+      all neighboring holes and edges. 
+    6. If there is more than one edge label, do nothing. If 
+      there is only one edge label, all the neighboring holes
+      are part of a hole group, label them with that edge label.
+
+  For boolean images, simply use the fill_voids algorithm since
+  that is faster.
+
   NOTE: if crackle-codec is installed, this function will have reduced memory usage.
 
   return_fill_count: return the total number of pixels filled in
     for boolean array: integer
     for integer array: { label: count }
   fix_borders: along each edge of the image, consider labels that are totally
-    enclosed to be holes
+    enclosed in 2d to be holes
   anisotropy: distortion along each axis, used for calculating contact surfaces
   merge_threshold: by default, only objects that are totally enclosed by a single
     label are considered holes, but sometimes they peek out slightly (e.g. an
