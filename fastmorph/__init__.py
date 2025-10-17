@@ -631,11 +631,8 @@ def fill_holes_v2(
       connectivity=6,
     )
 
-  sentinel = np.iinfo(labels.dtype).max
-
   orig_map = fastremap.component_map(cc_labels, labels)
   orig_map[0] = 0
-  orig_map[sentinel] = sentinel
 
   surface_areas = cc3d.contacts(
     cc_labels, 
