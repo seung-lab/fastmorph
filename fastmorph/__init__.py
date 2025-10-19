@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Optional, Sequence
 
 import numpy as np
+import numpy.typing as npt
 import edt
 import fill_voids
 import cc3d
@@ -437,45 +438,45 @@ def _pairs_to_connection_list(itr):
     tmp[l2].add(l1)
   return tmp
 
-def _fix_holes_2d(slice_labels:np.ndarray, merge_threshold:float) -> set[int]:
+def _fill_holes_2d(
+  slice_labels:npt.NDArray[np.number], 
+  zero_map:dict[int,int],
+) -> npt.NDArray[np.number]:
 
-  holes2d = set()
-  edge_surface_area = cc3d.contacts(slice_labels, connectivity=4)
-  connections2d = _pairs_to_connection_list(edge_surface_area.keys())      
+  output = np.zeros(slice_labels.shape, dtype=slice_labels.dtype, order="F")
 
-  slices2d = [
-    np.s_[0,:], np.s_[-1,:],
-    np.s_[:,0], np.s_[:,-1],
-  ]
+  cc_labels, N = cc3d.connected_components(
+    slice_labels,
+    connectivity=4,
+    return_N=True,
+  )
+  orig_map = fastremap.component_map(cc_labels, slice_labels)
 
-  # The edges of the slice are touching other borders and
-  # it is impossible to say if they are holes or not so
-  # protect those labels that touch the edge
-  protected = set()
-  for slc in slices2d:
-    protected.update(fastremap.unique(slice_labels[slc]))
+  stats = cc3d.statistics(cc_labels)
+  bboxes = stats["bounding_boxes"]
 
-  for segid, neighbors in connections2d.items():
-    neighbors.discard(0)
-    neighbors = [ 
-      (n, edge_surface_area[tuple(sorted([ segid, n ]))]) 
-      for n in neighbors
-    ]
-    total_edge_area = sum([ x[1] for x in neighbors ])
+  sublabels = set()
 
-    if total_edge_area == 0:
+  for segid in range(1,N):
+    if segid == 0:
+      continue
+    elif segid in sublabels:
+      continue
+    elif zero_map[orig_map[segid]] == 0:
       continue
 
-    neighbors = [ 
-      n for n, area in neighbors 
-      if (area/total_edge_area) >= merge_threshold 
-    ]
+    slc = bboxes[segid]
+    binary_image = cc_labels[slc] == segid
+    binary_image = fill_voids.fill(binary_image)
 
-    if len(neighbors) == 1:
-      holes2d.add(segid)
-    holes2d -= protected
+    enclosed = set(fastremap.unique(cc_labels[slc][binary_image]))
+    enclosed.discard(0)
+    enclosed.discard(segid)
+    sublabels.update(enclosed)
 
-  return holes2d
+    output[slc][binary_image] = orig_map[segid]
+
+  return output
 
 def _true_label(
   hole:int, 
