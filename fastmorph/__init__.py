@@ -462,11 +462,14 @@ def _fill_holes_2d(
       continue
     elif segid in sublabels:
       continue
-    elif zero_map[orig_map[segid]] == 0:
-      continue
-
+    
     slc = bboxes[segid]
     binary_image = cc_labels[slc] == segid
+    
+    if zero_map[orig_map[segid]] == 0:
+      output[slc][binary_image] = orig_map[segid]
+      continue
+    
     binary_image = fill_voids.fill(binary_image)
 
     enclosed = set(fastremap.unique(cc_labels[slc][binary_image]))
