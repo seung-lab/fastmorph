@@ -638,15 +638,6 @@ def fill_holes_v2(
   orig_map = fastremap.component_map(cc_labels, labels)
   orig_map[0] = 0
 
-  surface_areas = cc3d.contacts(
-    cc_labels, 
-    connectivity=6, 
-    surface_area=True, 
-    anisotropy=tuple(anisotropy),
-  )
-
-  connections = _pairs_to_connection_list(surface_areas.keys())
-
   slices = [
     np.s_[:,:,0],
     np.s_[:,:,-1],
@@ -656,15 +647,25 @@ def fill_holes_v2(
     np.s_[:,-1,:],
   ]
 
+  if fix_borders:
+    for slc in slices:
+      cc_labels[slc] = _fill_holes_2d(cc_labels[slc], orig_map)
+
+  surface_areas = cc3d.contacts(
+    cc_labels,
+    connectivity=6,
+    surface_area=True,
+    anisotropy=tuple(anisotropy),
+  )
+
+  connections = _pairs_to_connection_list(surface_areas.keys())
+
   edge_labels = set()
   bg_edge_labels = set()
 
   for slc in slices:
     slice_labels = cc_labels[slc]
     uniq = set(fastremap.unique(slice_labels))
-
-    if fix_borders:
-      uniq -= _fix_holes_2d(slice_labels, merge_threshold)
 
     for u in uniq:
       if orig_map[u] == 0:
@@ -689,7 +690,7 @@ def fill_holes_v2(
 
   remap = { i:i for i in range(N+1) }
 
-  visited = np.zeros(len(connections) + 1, dtype=bool)
+  visited = np.zeros(N + 1, dtype=bool)
   for hole in list(holes):
     parent_label, group = _true_label(
       hole, edge_labels, 
