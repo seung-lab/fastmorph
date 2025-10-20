@@ -431,7 +431,7 @@ def fill_holes(
 
 fill_holes_v1 = fill_holes
 
-def _pairs_to_connection_list(itr):
+def _pairs_to_connection_list(itr:Iterator[tuple[int,int]]) -> defaultdict[set[int]]:
   tmp = defaultdict(set)
   for l1, l2 in itr:
     tmp[l1].add(l2)
@@ -549,11 +549,14 @@ def _true_label(
   return hole, hole_group
 
 def _fill_binary_image(
-  binary_image:np.ndarray,
+  binary_image:npt.NDArray[np.bool_],
   fix_borders:bool,
   return_crackle:bool,
   parallel:int,
-):
+) -> Union[
+  tuple[npt.NDArray[np.bool_], npt.NDArray[np.bool_]],
+  tuple["CrackleArray", "CrackleArray"]
+]:
   if fix_borders:
     binary_image[:,:,0] = fill_voids.fill(binary_image[:,:,0])
     binary_image[:,:,-1] = fill_voids.fill(binary_image[:,:,-1])
@@ -575,13 +578,16 @@ def _fill_binary_image(
   return binary_image, np.zeros(binary_image.shape, dtype=bool, order=order)
 
 def fill_holes_v2(
-  labels:np.ndarray,
+  labels:npt.NDArray[np.number],
   fix_borders:bool = False,
   merge_threshold:float = 1.0,
   anisotropy:tuple[float,float,float] = (1.0, 1.0, 1.0),
   parallel:int = 0,
   return_crackle:bool = False,
-) -> Union[tuple[np.ndarray, np.ndarray], tuple["CrackleArray", "CrackleArray"]]:
+) -> Union[
+  tuple[npt.NDArray[np.number], npt.NDArray[np.number]], 
+  tuple["CrackleArray", "CrackleArray"]
+]:
   """
   For filling holes in toplogically closed objects using a faster method
   for multilabel objects.
