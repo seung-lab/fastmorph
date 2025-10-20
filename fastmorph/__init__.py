@@ -700,6 +700,7 @@ def fill_holes_v2(
     )
     if hole == parent_label:
       holes.discard(hole)
+      holes.difference_update(group)
       continue
 
     for hole_i in group:
