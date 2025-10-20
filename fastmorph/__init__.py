@@ -745,6 +745,8 @@ def fill_holes_v2(
   if HAS_CRACKLE:
     filled_labels = cc_labels.remap(remap).astype(labels.dtype)
     del cc_labels
+    del remap
+
     hole_labels = orig_cc_labels.mask_except(list(holes))
     hole_labels = hole_labels.remap(orig_map).astype(labels.dtype)
 
@@ -757,6 +759,7 @@ def fill_holes_v2(
       cc_labels, remap, in_place=False,
     ).astype(labels.dtype, copy=False)
     del cc_labels
+    del remap
 
     hole_labels = fastremap.mask_except(orig_cc_labels, list(holes), in_place=True)
     hole_labels = np.where(hole_labels, labels, 0).astype(labels.dtype, copy=False)
