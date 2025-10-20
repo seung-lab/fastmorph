@@ -486,11 +486,11 @@ def _true_label(
   surface_areas:dict[tuple[int,int],float],
   merge_threshold:float,
   visited:np.ndarray,
-) -> int:
+) -> tuple[int, set[int]]:
   assert 0.0 <= merge_threshold <= 1.0
 
   if hole in edges:
-    return hole
+    return hole, set()
 
   stack = [ hole ]
   found_edges = set()
