@@ -666,6 +666,13 @@ def fill_holes_v2(
     np.s_[:,-1,:],
   ]
 
+  if HAS_CRACKLE:
+    orig_cc_labels = crackle.compressa(cc_labels, parallel=parallel)
+  elif fix_borders:
+    orig_cc_labels = np.copy(cc_labels, order="F")
+  else:
+    orig_cc_labels = cc_labels
+
   if fix_borders:
     for slc in slices:
       cc_labels[slc] = _fill_holes_2d(cc_labels[slc], orig_map)
@@ -734,7 +741,8 @@ def fill_holes_v2(
 
   if HAS_CRACKLE:
     filled_labels = cc_labels.remap(remap).astype(labels.dtype)
-    hole_labels = cc_labels.mask_except(list(holes))
+    del cc_labels
+    hole_labels = orig_cc_labels.mask_except(list(holes))
     hole_labels = hole_labels.remap(orig_map).astype(labels.dtype)
 
     if return_crackle:
@@ -745,8 +753,9 @@ def fill_holes_v2(
     filled_labels = fastremap.remap(
       cc_labels, remap, in_place=False,
     ).astype(labels.dtype, copy=False)
+    del cc_labels
 
-    hole_labels = fastremap.mask_except(cc_labels, list(holes))
-    hole_labels = np.where(hole_labels, labels, 0)
+    hole_labels = fastremap.mask_except(orig_cc_labels, list(holes), in_place=True)
+    hole_labels = np.where(hole_labels, labels, 0).astype(labels.dtype, copy=False)
 
     return (filled_labels, hole_labels)
