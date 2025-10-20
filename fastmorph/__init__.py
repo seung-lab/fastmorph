@@ -518,7 +518,7 @@ def _true_label(
     areas = defaultdict(int)
     total_area = 0
 
-    if len(hole_group) * len(found_edges) < len(connections):
+    if len(hole_group) * len(found_edges) < len(surface_areas):
       for edge in found_edges:
         for hole_i in hole_group:
           area = surface_areas.get(tuple(sorted([edge, hole_i])), 0)
