@@ -458,9 +458,7 @@ def _fill_holes_2d(
   sublabels = set()
 
   for segid in range(1,N):
-    if segid == 0:
-      continue
-    elif segid in sublabels:
+    if segid in sublabels:
       continue
     
     slc = bboxes[segid]
