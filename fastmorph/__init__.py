@@ -690,6 +690,9 @@ def fill_holes_v2(
 
   visited = np.zeros(N + 1, dtype=bool)
   for hole in list(holes):
+    if visited[hole]:
+      continue
+
     parent_label, group = _true_label(
       hole, edge_labels, 
       connections, surface_areas, 
