@@ -64,17 +64,53 @@ morphed = fastmorph.spherical_close(labels, radius=1, parallel=2, anisotropy=(1,
 # The rest support multilabel images.
 morphed = fastmorph.spherical_erode(labels, radius=1, parallel=2, anisotropy=(1,1,1))
 
+
+# Rapid multilabel hole filling. There are two versions that use different techniques
+# and have different interfaces for their "aggressive" modes. Both modes fill
+# holes appropriately by default.
+#
+# Generally speaking, fill_holes_v2 will be much faster. v2 uses a 
+# mostly linear time contact graph analysis. v1 analyzes a sequence 
+# of binary images. v2 exhibits much better scaling behavior and supports 
+# returning the filled and hole labels as  CrackleArray compressed objects 
+# to save memory.
+# 
+# The main advantage of v1 is that it includes a morphological closure mode
+# that operates on voxels for closing small holes. The downside is that this
+# can modify the surface of the object.
+#
+# v2 allows merging holes that are less than 100% closed, but if this
+# threshold is set too high, holes won't be closed. If it is too low,
+# improper merging can occur. 
+# 
+# In both methods, objects that contact the sides or more than one side
+# (in the case of fix_borders) cannot be merged.
+
+filled_labels, hole_labels = fastmorph.fill_holes_v2(labels)
+# requires: pip install crackle-codec
+# returns as compressed CrackleArrays that have speedy access to labels 
+# in the compressed state (often hundreds of times smaller than the full array)
+filled_labels, hole_labels = fastmorph.fill_holes_v2(labels, return_crackle=True)
+
+# fix_borders runs hole filling for each object on the edge to reduce edge contacts
+filled_labels, hole_labels = fastmorph.fill_holes_v2(labels, fix_borders=True)
+
+# merge_threshold (range 0.0 - 1.0) controls how much surface area can be 
+# "exposed" for a hole to still be filled. The default (1.0) means a hole
+# must be perfectly sealed (typical for hole filling algorithms).
+filled_labels, hole_labels = fastmorph.fill_holes_v2(labels, merge_threshold=0.97)
+
 # Note: for boolean images, this function will directly call fill_voids
 # and return a scalar for ct 
 # For integer images, more processing will be done to deal with multiple labels.
 # A dict of { label: num_voxels_filled } for integer images will be returned.
 # Note that for multilabel images, by default, if a label is totally enclosed by another,
 # a FillError will be raised. If remove_enclosed is True, the label will be overwritten.
-filled_labels, ct = fastmorph.fill_holes(labels, return_fill_count=True, remove_enclosed=False)
+filled_labels, ct = fastmorph.fill_holes_v1(labels, return_fill_count=True, remove_enclosed=False)
 
 # If the holes in your segmentation are imperfectly sealed, consider
 # using the following options.
-filled_labels = fastmorph.fill_holes(
+filled_labels = fastmorph.fill_holes_v1(
 	labels, 
 	# runs 2d fill on the sides of the cube for each binary image
 	fix_borders=True, 
