@@ -633,6 +633,9 @@ def fill_holes_v2(
 
   Return value: (filled_labels, hole_labels)
   """
+  if not HAS_CRACKLE and return_crackle:
+    raise ImportError("crackle not found. Try pip install crackle-codec or set return_crackle=False")
+
   if np.issubdtype(labels.dtype, bool):
     # This is for speed, not because the below code is incorrect for bool
     # merge_threshold does nothing for a binary image anyway, so ignore it.
