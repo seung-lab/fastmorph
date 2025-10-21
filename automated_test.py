@@ -1,6 +1,9 @@
+import time
+
 import pytest
 import numpy as np
 import fastmorph
+import scipy.ndimage
 
 def test_spherical_dilate():
 	labels = np.zeros((10,10,10), dtype=bool)
@@ -108,6 +111,88 @@ def test_complex_fill():
 	)
 
 	assert np.all(res == ans)
+
+def test_fill_holes_v2():
+	labels = np.zeros((10,10,10), dtype=np.uint64)
+	filled, holes = fastmorph.fill_holes_v2(labels)
+	assert not np.any(filled)
+	assert not np.any(holes)
+
+	labels = np.ones((10,10,10), dtype=np.uint8)
+	labels[:,:,:5] = 2
+
+	labels[5,5,2] = 0
+	labels[5,5,7] = 0
+
+	assert np.count_nonzero(labels) == 998
+	filled, holes = fastmorph.fill_holes_v2(labels)
+	assert np.count_nonzero(filled) == 1000
+	assert list(np.unique(filled)) == [1,2]
+
+	assert filled[5,5,2] == 2
+	assert filled[5,5,7] == 1
+
+	labels = np.ones((10,10,10), dtype=np.uint32)
+	labels[5,5,2] = 777
+
+	filled, holes = fastmorph.fill_holes_v2(labels, return_crackle=True)
+	assert set(holes.labels()) == set([0,777])
+
+	labels = np.ones((10,10,10), dtype=bool)
+	labels[5,5,2] = 0
+
+	res, holes = fastmorph.fill_holes_v2(labels)
+	assert np.all(res)
+	assert not np.any(holes)
+
+def test_fill_v2_fix_borders():
+	labels = np.ones([100,100,100], dtype=np.uint8)
+	labels[40:60,40:60,:] = 2
+	labels[40:60,:,40:60] = 2
+	labels[:,40:60,40:60] = 2
+
+	filled, holes = fastmorph.fill_holes_v2(
+		labels, 
+		fix_borders=False,
+	)
+	assert np.all(filled == labels)
+
+	filled, holes = fastmorph.fill_holes_v2(
+		labels, 
+		fix_borders=True,
+	)
+	assert np.all(filled == 1)
+	assert np.count_nonzero(holes) == 20*20*100*3 - 20*20*20*2
+
+	labels = np.ones([100,100,100], dtype=np.uint8)
+	labels[40:60,40:60,0] = 2
+	labels[40:60,0,40:60] = 2
+	labels[0,40:60,40:60] = 2
+
+	filled, holes = fastmorph.fill_holes_v2(
+		labels, 
+		fix_borders=True,
+	)
+
+	assert np.all(filled == 1)
+	assert np.count_nonzero(holes) == 20*20*3
+
+def test_fill_holes_v2_data():
+	import crackle
+	labels = crackle.load("connectomics.npy.ckl.gz")
+
+	s = time.time()
+	filled, holes = fastmorph.fill_holes_v2(labels)
+	print(f"{time.time() - s:.3f}")
+
+	uniq = np.unique(filled)
+	for lbl in uniq[:10]:
+		print(lbl)
+		if lbl == 0:
+			continue
+		binary_image_fm = filled == lbl
+		binary_image_scipy = scipy.ndimage.binary_fill_holes(labels == lbl)
+		assert np.all(binary_image_fm == binary_image_scipy)
 
 def test_spherical_open_close_run():
 	labels = np.zeros((10,10,10), dtype=bool)

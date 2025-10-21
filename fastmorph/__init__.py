@@ -1,18 +1,28 @@
+from typing import Union, Iterator
+
+from collections import defaultdict
 from enum import Enum
 from typing import Optional, Sequence
 
 import numpy as np
+import numpy.typing as npt
 import edt
 import fill_voids
 import cc3d
 import fastremap
 import multiprocessing as mp
 
+try:
+  import crackle
+  HAS_CRACKLE = True
+except ImportError:
+  HAS_CRACKLE = False
+
 from tqdm import trange
 
 import fastmorphops
 
-AnisotropyType = Optional[Sequence[int]]
+AnisotropyType = Optional[Iterator[float]]
 
 class Mode(Enum):
   multilabel = 1
@@ -275,7 +285,7 @@ def fill_holes(
   parallel:int = 0,
 ) -> np.ndarray:
   """
-  For fill holes in toplogically closed objects.
+  For filling holes in toplogically closed objects.
 
   return_fill_count: return the total number of pixels filled in
     for boolean array: integer
@@ -419,3 +429,350 @@ def fill_holes(
 
   return (ret[0] if len(ret) == 1 else tuple(ret))
 
+fill_holes_v1 = fill_holes
+
+def _pairs_to_connection_list(itr:Iterator[tuple[int,int]]) -> defaultdict[set[int]]:
+  tmp = defaultdict(set)
+  for l1, l2 in itr:
+    tmp[l1].add(l2)
+    tmp[l2].add(l1)
+  return tmp
+
+def _fill_holes_2d(
+  slice_labels:npt.NDArray[np.number], 
+  zero_map:dict[int,int],
+) -> npt.NDArray[np.number]:
+
+  output = np.zeros(slice_labels.shape, dtype=slice_labels.dtype, order="F")
+
+  cc_labels, N = cc3d.connected_components(
+    slice_labels,
+    connectivity=4,
+    return_N=True,
+  )
+
+  if N <= 1:
+    return slice_labels, set()
+
+  orig_map = fastremap.component_map(cc_labels, slice_labels)
+
+  stats = cc3d.statistics(cc_labels)
+  bboxes = stats["bounding_boxes"]
+
+  sublabels = set()
+
+  for segid in range(1,N):
+    if segid in sublabels:
+      continue
+    
+    slc = bboxes[segid]
+    binary_image = cc_labels[slc] == segid
+    
+    if zero_map[orig_map[segid]] == 0:
+      output[slc][binary_image] = orig_map[segid]
+      continue
+    
+    binary_image = fill_voids.fill(binary_image)
+
+    enclosed = set(fastremap.unique(cc_labels[slc][binary_image]))
+    enclosed.discard(0)
+    enclosed.discard(segid)
+    sublabels.update(enclosed)
+    output[slc][binary_image] = orig_map[segid]
+
+  sublabels = set([ orig_map[sid] for sid in sublabels ])
+  return output, sublabels
+
+def _true_label(
+  hole:int, 
+  edges:set[int], 
+  connections:dict[int,list[int]],
+  surface_areas:dict[tuple[int,int],float],
+  merge_threshold:float,
+  visited:np.ndarray,
+) -> tuple[int, set[int]]:
+  assert 0.0 <= merge_threshold <= 1.0
+
+  if hole in edges:
+    return hole, set()
+
+  stack = [ hole ]
+  found_edges = set()
+  hole_group = set()
+
+  while stack:
+    label = stack.pop()
+
+    if label in edges:
+      found_edges.add(label)
+      visited[label] = True
+      continue
+
+    hole_group.add(label)
+
+    if visited[label]:
+      continue
+
+    visited[label] = True
+
+    for next_label in connections[label]:
+      stack.append(next_label)
+
+  if merge_threshold > 0.0 and len(found_edges) > 1:
+    areas = defaultdict(int)
+    total_area = 0
+
+    if len(hole_group) * len(found_edges) < len(surface_areas):
+      for edge in found_edges:
+        for hole_i in hole_group:
+          area = surface_areas.get(tuple(sorted([edge, hole_i])), 0)
+          areas[edge] += area
+          total_area += area
+    else:
+      subset = [ 
+        pair for pair in surface_areas.keys() 
+        if (
+          (pair[0] in hole_group and pair[1] in found_edges)
+          or (pair[1] in hole_group and pair[0] in found_edges)
+        )
+      ]
+
+      for pair in subset:
+        area = surface_areas[pair]
+        edge = pair[0] if pair[0] in found_edges else pair[1]
+        areas[edge] += area
+        total_area += area
+
+    for edge in list(found_edges):
+      if areas[edge] / total_area < merge_threshold:
+        found_edges.discard(edge)
+
+  if len(found_edges) == 1:
+    return next(iter(found_edges)), hole_group
+  
+  return hole, hole_group
+
+def _fill_binary_image(
+  binary_image:npt.NDArray[np.bool_],
+  fix_borders:bool,
+  return_crackle:bool,
+  parallel:int,
+) -> Union[
+  tuple[npt.NDArray[np.bool_], npt.NDArray[np.bool_]],
+  tuple["CrackleArray", "CrackleArray"]
+]:
+  if fix_borders:
+    binary_image[:,:,0] = fill_voids.fill(binary_image[:,:,0])
+    binary_image[:,:,-1] = fill_voids.fill(binary_image[:,:,-1])
+    binary_image[:,0,:] = fill_voids.fill(binary_image[:,0,:])
+    binary_image[:,-1,:] = fill_voids.fill(binary_image[:,-1,:])
+    binary_image[0,:,:] = fill_voids.fill(binary_image[0,:,:])
+    binary_image[-1,:,:] = fill_voids.fill(binary_image[-1,:,:])
+  
+  binary_image = fill_voids.fill(binary_image)
+
+  order = "F" if binary_image.flags.f_contiguous else "C"
+
+  if return_crackle:
+    filled = crackle.compressa(binary_image, parallel=parallel)
+    holes = crackle.CrackleArray(crackle.zeros(binary_image.shape, dtype=bool, order=order))
+    holes.parallel = parallel
+    return filled, holes
+
+  return binary_image, np.zeros(binary_image.shape, dtype=bool, order=order)
+
+def fill_holes_v2(
+  labels:npt.NDArray[np.number],
+  fix_borders:bool = False,
+  merge_threshold:float = 1.0,
+  anisotropy:AnisotropyType = (1.0, 1.0, 1.0),
+  parallel:int = 0,
+  return_crackle:bool = False,
+) -> Union[
+  tuple[npt.NDArray[np.number], npt.NDArray[np.number]], 
+  tuple["CrackleArray", "CrackleArray"]
+]:
+  """
+  For filling holes in toplogically closed objects using a faster method
+  for multilabel objects.
+
+  Base Mulit-Label Fill Algorithm:
+
+    1. Color all 6-connected components (even background)
+    2. Compute surface area of adjacent regions (6-connected)
+    3. Compute connection list { label: [neighbor labels], ... }
+    4. Create a set of candidate holes from all connected components
+      and then filter them by the set difference with labels touching
+      the edges of the cutout.
+        - To account for e.g. a foreground object surrounded by 
+          background, also label as edges all objects touching
+          background that touches the image border.
+    5. For each hole, walk through the region graph to identify 
+      all neighboring holes and edges. 
+    6. If there is more than one edge label, do nothing. If 
+      there is only one edge label, all the neighboring holes
+      are part of a hole group, label them with that edge label.
+
+  For boolean images, simply use the fill_voids algorithm since
+  that is faster.
+
+  NOTE: if crackle-codec is installed, this function will have reduced memory usage.
+
+  return_fill_count: return the total number of pixels filled in
+    for boolean array: integer
+    for integer array: { label: count }
+  fix_borders: along each edge of the image, try filling each label as a binary
+    image and consider labels removed to be holes and fill them. holes will be
+    returned without this filling artifact
+  anisotropy: distortion along each axis, used for calculating contact surfaces
+  merge_threshold: by default, only objects that are totally enclosed by a single
+    label are considered holes, but sometimes they peek out slightly (e.g. an
+    organelle touching the membrane of a cell). You can set merge_threshold from
+    0.0 to 1.0. This is the fraction of surface area that must be enclosed by a 
+    single label to be considered mergable. You probably want this to be set
+    above 0.85 at the outside (more likely above 0.95). Set it too low, and you'll 
+    introduce external mergers.
+  parallel: pass this value to any internal algorithms that support parallel operation
+  return_crackle: you can reduce memory usage by returning the outputs as compressed
+    CrackleArrays.
+
+  Return value: (filled_labels, hole_labels)
+  """
+  if not HAS_CRACKLE and return_crackle:
+    raise ImportError("crackle not found. Try pip install crackle-codec or set return_crackle=False")
+
+  if np.issubdtype(labels.dtype, bool):
+    # This is for speed, not because the below code is incorrect for bool
+    # merge_threshold does nothing for a binary image anyway, so ignore it.
+    return _fill_binary_image(labels, fix_borders, return_crackle, parallel)
+
+  # Ensure bg 0 gets treated as a connected component
+  if labels.flags.writeable:
+    labels += 1
+    cc_labels, N = cc3d.connected_components(
+      labels, 
+      return_N=True, 
+      connectivity=6,
+    )
+    labels -= 1
+  else:
+    cc_labels, N = cc3d.connected_components(
+      labels + 1, 
+      return_N=True, 
+      connectivity=6,
+    )
+
+  orig_map = fastremap.component_map(cc_labels, labels)
+  orig_map[0] = 0
+
+  slices = [
+    np.s_[:,:,0],
+    np.s_[:,:,-1],
+    np.s_[0,:,:],
+    np.s_[-1,:,:],
+    np.s_[:,0,:],
+    np.s_[:,-1,:],
+  ]
+
+  if HAS_CRACKLE:
+    orig_cc_labels = crackle.compressa(cc_labels, parallel=parallel)
+  elif fix_borders:
+    orig_cc_labels = np.copy(cc_labels, order="F")
+  else:
+    orig_cc_labels = cc_labels
+
+  enclosed_2d = set()
+  if fix_borders:
+    for slc in slices:
+      cc_labels[slc], enclosed_2d_slice = _fill_holes_2d(cc_labels[slc], orig_map)
+      enclosed_2d.update(enclosed_2d_slice)
+
+  surface_areas = cc3d.contacts(
+    cc_labels,
+    connectivity=6,
+    surface_area=True,
+    anisotropy=tuple(anisotropy),
+  )
+
+  connections = _pairs_to_connection_list(surface_areas.keys())
+
+  edge_labels = set()
+  bg_edge_labels = set()
+
+  for slc in slices:
+    slice_labels = cc_labels[slc]
+    uniq = set(fastremap.unique(slice_labels))
+
+    for u in uniq:
+      if orig_map[u] == 0:
+        bg_edge_labels.add(u)
+
+    edge_labels.update(uniq)
+
+  for bgl in bg_edge_labels:
+    for lbl in connections[bgl]:
+      if surface_areas[tuple(sorted([bgl, lbl]))] > 0:
+        edge_labels.add(lbl)
+
+  del uniq
+  del slice_labels
+
+  if HAS_CRACKLE:
+    cc_labels = crackle.compressa(cc_labels, parallel=parallel)
+    enclosed_2d.difference_update(cc_labels.labels())
+  elif fix_borders:
+    enclosed_2d.difference_update(fastremap.unique(cc_labels))
+
+  candidate_holes = set(range(1,N+1))
+  holes = candidate_holes.difference(edge_labels)
+  del candidate_holes
+
+  remap = { i:i for i in range(N+1) }
+
+  visited = np.zeros(N + 1, dtype=bool)
+  for hole in list(holes):
+    if visited[hole]:
+      continue
+
+    parent_label, group = _true_label(
+      hole, edge_labels, 
+      connections, surface_areas, 
+      merge_threshold, visited,
+    )
+    if hole == parent_label:
+      holes.discard(hole)
+      holes.difference_update(group)
+      continue
+
+    for hole_i in group:
+      remap[hole_i] = parent_label
+
+  del connections
+  del edge_labels
+
+  remap = { k: orig_map[v] for k,v in remap.items()  }
+  holes.update(enclosed_2d)
+
+  if HAS_CRACKLE:
+    filled_labels = cc_labels.remap(remap).astype(labels.dtype)
+    del cc_labels
+    del remap
+
+    hole_labels = orig_cc_labels.mask_except(list(holes))
+    hole_labels = hole_labels.remap(orig_map).astype(labels.dtype)
+
+    if return_crackle:
+      return (filled_labels, hole_labels)
+    else:
+      return (filled_labels.numpy(), hole_labels.numpy())
+  else:
+    filled_labels = fastremap.remap(
+      cc_labels, remap, in_place=False,
+    ).astype(labels.dtype, copy=False)
+    del cc_labels
+    del remap
+
+    hole_labels = fastremap.mask_except(orig_cc_labels, list(holes), in_place=True)
+    hole_labels = np.where(hole_labels, labels, 0).astype(labels.dtype, copy=False)
+
+    return (filled_labels, hole_labels)

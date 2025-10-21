@@ -32,7 +32,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pytest pybind11 setuptools wheel crackle-codec 
+          python -m pip install pytest pybind11 setuptools wheel crackle-codec scipy
           python -m pip install connected-components-3d edt fastremap numpy tqdm fill-voids
 
       - name: Compile
