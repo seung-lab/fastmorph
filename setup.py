@@ -30,6 +30,9 @@ setuptools.setup(
     'numpy',
     'tqdm',
   ],
+  extras_require={
+    "spherical": [ "scipy" ],
+  },
   python_requires=">=3.9.0",
   author="William Silversmith",
   author_email="ws9@princeton.edu",
