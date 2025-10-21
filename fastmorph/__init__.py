@@ -22,7 +22,7 @@ from tqdm import trange
 
 import fastmorphops
 
-AnisotropyType = Optional[Iterator[int]]
+AnisotropyType = Optional[Iterator[float]]
 
 class Mode(Enum):
   multilabel = 1
@@ -581,7 +581,7 @@ def fill_holes_v2(
   labels:npt.NDArray[np.number],
   fix_borders:bool = False,
   merge_threshold:float = 1.0,
-  anisotropy:tuple[float,float,float] = (1.0, 1.0, 1.0),
+  anisotropy:AnisotropyType = (1.0, 1.0, 1.0),
   parallel:int = 0,
   return_crackle:bool = False,
 ) -> Union[
