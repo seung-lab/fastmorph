@@ -8,8 +8,7 @@ We provide the following multithreaded (except where noted) operations:
 
 - Multi-Label Stenciled Dilation, Erosion, Opening, Closing
 - Grayscale Stenciled Dilation, Erosion, Opening, Closing
-- Multi-Label Spherical Erosion
-- Binary Spherical Dilation, Opening, and Closing
+- Multi-Label Spherical Erosion, Dilation, Opening, and Closing
 - Multi-Label Fill Voids (mostly single threaded)
 
 Highlights compared to other libraries:
@@ -23,6 +22,14 @@ Highlights compared to other libraries:
 Disadvantages versus other libraries:
 
 - Stencil (structuring element) is fixed size 3x3x3 and all on.
+
+## Installation
+
+```
+pip install "fastmorph[spherical]"
+```
+
+## Examples
 
 
 ```python
