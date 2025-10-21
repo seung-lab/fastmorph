@@ -208,15 +208,15 @@ def spherical_dilate(
   """
   if np.issubdtype(labels.dtype, bool):
     dt = edt.edt(labels == 0, parallel=parallel, anisotropy=anisotropy)
-    
-    binary_image = lambda: dt <= radius
+    binary_image = dt <= radius
+    del dt
+
     if in_place:
-      labels |= binary_image()
+      labels |= binary_image
       return labels
 
-    binimg = binary_image()
-    binimg |= labels
-    return binimg
+    binary_image |= labels
+    return binary_image
 
   import scipy.ndimage
   dt, indices = scipy.ndimage.distance_transform_edt(
