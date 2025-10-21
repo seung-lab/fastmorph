@@ -621,8 +621,9 @@ def fill_holes_v2(
   return_fill_count: return the total number of pixels filled in
     for boolean array: integer
     for integer array: { label: count }
-  fix_borders: along each edge of the image, consider labels that are totally
-    enclosed in 2d to be holes
+  fix_borders: along each edge of the image, try filling each label as a binary
+    image and consider labels removed to be holes and fill them. holes will be
+    returned without this filling artifact
   anisotropy: distortion along each axis, used for calculating contact surfaces
   merge_threshold: by default, only objects that are totally enclosed by a single
     label are considered holes, but sometimes they peek out slightly (e.g. an

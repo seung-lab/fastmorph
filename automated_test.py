@@ -173,7 +173,7 @@ def test_fill_v2_fix_borders():
 		labels, 
 		fix_borders=True,
 	)
-	
+
 	assert np.all(filled == 1)
 	assert np.count_nonzero(holes) == 20*20*3
 
