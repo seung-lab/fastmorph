@@ -229,7 +229,15 @@ def spherical_dilate(
   del dt
   dilated = labels[tuple(indices)]
   del indices
-  return np.where(mask, dilated, labels) 
+  dilated *= mask
+  del mask
+
+  if in_place:
+    labels |= dilated
+    return labels
+  else:
+    dilated |= labels
+    return dilated
 
 def spherical_erode(
   labels:np.ndarray, 
