@@ -206,17 +206,30 @@ def spherical_dilate(
 
   Returns: dilated binary image
   """
-  assert np.issubdtype(labels.dtype, bool), "Dilation is currently only supported for binary images."
-  dt = edt.edt(labels == 0, parallel=parallel, anisotropy=anisotropy)
-  
-  binary_image = lambda: dt <= radius
-  if in_place:
-    labels |= binary_image()
-    return labels
+  if np.issubdtype(labels.dtype, bool):
+    dt = edt.edt(labels == 0, parallel=parallel, anisotropy=anisotropy)
+    
+    binary_image = lambda: dt <= radius
+    if in_place:
+      labels |= binary_image()
+      return labels
 
-  binimg = binary_image()
-  binimg |= labels
-  return binimg
+    binimg = binary_image()
+    binimg |= labels
+    return binimg
+
+  import scipy.ndimage
+  dt, indices = scipy.ndimage.distance_transform_edt(
+    labels == 0, 
+    return_distances=True, 
+    return_indices=True,
+    sampling=anisotropy,
+  )
+  mask = dt <= radius
+  del dt
+  dilated = labels[tuple(indices)]
+  del indices
+  return np.where(mask, dilated, labels) 
 
 def spherical_erode(
   labels:np.ndarray, 
