@@ -214,7 +214,9 @@ def spherical_dilate(
     labels |= binary_image()
     return labels
 
-  return labels | binary_image()
+  binimg = binary_image()
+  binimg |= labels
+  return binimg
 
 def spherical_erode(
   labels:np.ndarray, 
