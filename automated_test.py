@@ -24,9 +24,10 @@ def test_spherical_dilate():
 	res = fastmorph.spherical_dilate(labels, radius=np.sqrt(3))
 	assert np.count_nonzero(res) == 27
 
-def test_spherical_erode():
+@pytest.mark.parametrize("in_place", [False, True])
+def test_spherical_erode(in_place):
 	labels = np.ones((10,10,10), dtype=bool)
-	res = fastmorph.spherical_erode(labels, radius=1000)
+	res = fastmorph.spherical_erode(labels, radius=1000, in_place=in_place)
 	assert np.all(res == False)
 
 def test_fill_holes():
