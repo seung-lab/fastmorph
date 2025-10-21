@@ -277,8 +277,7 @@ def spherical_open(
   anisotropy:AnisotropyType = None,
   in_place:bool = False,
 ) -> np.ndarray:
-  """Apply a spherical morphological open operation to a binary image."""
-  assert np.issubdtype(labels.dtype, bool), "spherical_open is currently only supported for binary images."
+  """Apply a spherical morphological open operation."""
   args = [ radius, parallel, anisotropy, in_place ]
   return spherical_dilate(spherical_erode(labels, *args), *args)
 
@@ -289,11 +288,9 @@ def spherical_close(
   anisotropy:AnisotropyType = None,
   in_place:bool = False,
 ) -> np.ndarray:
-  """Apply a spherical morphological close operation to a binary image."""
-  assert np.issubdtype(labels.dtype, bool), "spherical_close is currently only supported for binary images."
+  """Apply a spherical morphological close operation."""
   args = [ radius, parallel, anisotropy, in_place ]
   return spherical_erode(spherical_dilate(labels, *args), *args)
-
 
 class FillError(Exception):
   pass
