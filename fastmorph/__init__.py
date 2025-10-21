@@ -253,12 +253,14 @@ def spherical_erode(
   Returns: eroded multi-label iamge  
   """
   dt = edt.edt(labels, parallel=parallel, anisotropy=anisotropy, black_border=True)
+  binary_image = dt >= radius
+  del dt
 
-  binary_image = lambda: dt >= radius
-  if in_place:
-    labels *= binary_image()
-    return labels
-  return (labels * binary_image()).astype(labels.dtype, copy=False)
+  if not in_place:
+    labels = labels.copy()
+
+  labels *= binary_image
+  return labels
 
 def spherical_open(
   labels:np.ndarray, 
