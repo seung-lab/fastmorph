@@ -451,7 +451,7 @@ def _fill_holes_2d(
     return_N=True,
   )
 
-  if N == 1:
+  if N <= 1:
     return slice_labels, set()
 
   orig_map = fastremap.component_map(cc_labels, slice_labels)
