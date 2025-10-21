@@ -60,19 +60,13 @@ morphed = fastmorph.closing(labels, parallel=2)
 morphed = fastmorph.dilate(labels, mode=fastmorph.Mode.grey)
 morphed = fastmorph.erode(labels, mode=fastmorph.Mode.grey)
 
-# Dilate only supports binary images at this time.
 # Radius is specified in physical units, but
 # by default anisotropy = (1,1,1) so it is the 
 # same as voxels.
 morphed = fastmorph.spherical_dilate(labels, radius=1, parallel=2, anisotropy=(1,1,1))
-
-# open and close require dialate to work and so are binary only for now
 morphed = fastmorph.spherical_open(labels, radius=1, parallel=2, anisotropy=(1,1,1))
 morphed = fastmorph.spherical_close(labels, radius=1, parallel=2, anisotropy=(1,1,1))
-
-# The rest support multilabel images.
 morphed = fastmorph.spherical_erode(labels, radius=1, parallel=2, anisotropy=(1,1,1))
-
 
 # Rapid multilabel hole filling. There are two versions that use different techniques
 # and have different interfaces for their "aggressive" modes. Both modes fill
