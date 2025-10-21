@@ -25,6 +25,8 @@ Disadvantages versus other libraries:
 
 ## Installation
 
+The "spherical" extra dependency enables multilabel spherical dilation, opening, and closing by installing scipy.
+
 ```
 pip install "fastmorph[spherical]"
 ```
