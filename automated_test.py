@@ -140,6 +140,38 @@ def test_fill_holes_v2():
 	assert np.all(res)
 	assert not np.any(holes)
 
+def test_fill_v2_fix_borders():
+	labels = np.ones([100,100,100], dtype=np.uint8)
+	labels[40:60,40:60,:] = 2
+	labels[40:60,:,40:60] = 2
+	labels[:,40:60,40:60] = 2
+
+	filled, holes = fastmorph.fill_holes_v2(
+		labels, 
+		fix_borders=False,
+	)
+	assert np.all(filled == labels)
+
+	filled, holes = fastmorph.fill_holes_v2(
+		labels, 
+		fix_borders=True,
+	)
+	assert np.all(filled == 1)
+	assert np.count_nonzero(holes) == 20*20*100*3 - 20*20*20*2
+
+	labels = np.ones([100,100,100], dtype=np.uint8)
+	labels[40:60,40:60,0] = 2
+	labels[40:60,0,40:60] = 2
+	labels[0,40:60,40:60] = 2
+
+	filled, holes = fastmorph.fill_holes_v2(
+		labels, 
+		fix_borders=True,
+	)
+	
+	assert np.all(filled == 1)
+	assert np.count_nonzero(holes) == 20*20*3
+
 def test_fill_holes_v2_data():
 	import crackle
 	labels = crackle.load("connectomics.npy.ckl.gz")
