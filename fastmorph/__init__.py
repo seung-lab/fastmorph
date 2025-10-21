@@ -450,6 +450,10 @@ def _fill_holes_2d(
     connectivity=4,
     return_N=True,
   )
+
+  if N == 1:
+    return slice_labels, set()
+
   orig_map = fastremap.component_map(cc_labels, slice_labels)
 
   stats = cc3d.statistics(cc_labels)
