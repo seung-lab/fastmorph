@@ -113,6 +113,11 @@ def test_complex_fill():
 	assert np.all(res == ans)
 
 def test_fill_holes_v2():
+	labels = np.zeros((10,10,10), dtype=np.uint64)
+	filled, holes = fastmorph.fill_holes_v2(labels)
+	assert not np.any(filled)
+	assert not np.any(holes)
+
 	labels = np.ones((10,10,10), dtype=np.uint8)
 	labels[:,:,:5] = 2
 
