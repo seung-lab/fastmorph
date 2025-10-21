@@ -5,23 +5,31 @@ import numpy as np
 import fastmorph
 import scipy.ndimage
 
-def test_spherical_dilate():
+@pytest.mark.parametrize("in_place", [False, True])
+def test_spherical_dilate(in_place):
 	labels = np.zeros((10,10,10), dtype=bool)
-	res = fastmorph.spherical_dilate(labels, radius=1000)
+	res = fastmorph.spherical_dilate(labels, radius=1000, in_place=in_place)
 	assert np.all(res == False)
 
+	labels = np.zeros((10,10,10), dtype=bool)
 	labels[5,5,5] = True
 	radius = 5 * np.sqrt(3) + 0.000001
-	res = fastmorph.spherical_dilate(labels, radius=radius)
+	res = fastmorph.spherical_dilate(labels, radius=radius, in_place=in_place)
 	assert np.all(res == True)	
 
-	res = fastmorph.spherical_dilate(labels, radius=1)
+	labels = np.zeros((10,10,10), dtype=bool)
+	labels[5,5,5] = True
+	res = fastmorph.spherical_dilate(labels, radius=1, in_place=in_place)
 	assert np.count_nonzero(res) == 7
 
-	res = fastmorph.spherical_dilate(labels, radius=np.sqrt(2))
+	labels = np.zeros((10,10,10), dtype=bool)
+	labels[5,5,5] = True
+	res = fastmorph.spherical_dilate(labels, radius=np.sqrt(2), in_place=in_place)
 	assert np.count_nonzero(res) == 19
-
-	res = fastmorph.spherical_dilate(labels, radius=np.sqrt(3))
+	
+	labels = np.zeros((10,10,10), dtype=bool)
+	labels[5,5,5] = True
+	res = fastmorph.spherical_dilate(labels, radius=np.sqrt(3), in_place=in_place)
 	assert np.count_nonzero(res) == 27
 
 @pytest.mark.parametrize("in_place", [False, True])
