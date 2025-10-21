@@ -478,10 +478,10 @@ def _fill_holes_2d(
     enclosed.discard(0)
     enclosed.discard(segid)
     sublabels.update(enclosed)
-
     output[slc][binary_image] = orig_map[segid]
 
-  return output
+  sublabels = set([ orig_map[sid] for sid in sublabels ])
+  return output, sublabels
 
 def _true_label(
   hole:int, 
@@ -680,9 +680,11 @@ def fill_holes_v2(
   else:
     orig_cc_labels = cc_labels
 
+  enclosed_2d = set()
   if fix_borders:
     for slc in slices:
-      cc_labels[slc] = _fill_holes_2d(cc_labels[slc], orig_map)
+      cc_labels[slc], enclosed_2d_slice = _fill_holes_2d(cc_labels[slc], orig_map)
+      enclosed_2d.update(enclosed_2d_slice)
 
   surface_areas = cc3d.contacts(
     cc_labels,
@@ -716,6 +718,9 @@ def fill_holes_v2(
 
   if HAS_CRACKLE:
     cc_labels = crackle.compressa(cc_labels, parallel=parallel)
+    enclosed_2d.difference_update(cc_labels.labels())
+  elif fix_borders:
+    enclosed_2d.difference_update(fastremap.unique(cc_labels))
 
   candidate_holes = set(range(1,N+1))
   holes = candidate_holes.difference(edge_labels)
@@ -745,6 +750,7 @@ def fill_holes_v2(
   del edge_labels
 
   remap = { k: orig_map[v] for k,v in remap.items()  }
+  holes.update(enclosed_2d)
 
   if HAS_CRACKLE:
     filled_labels = cc_labels.remap(remap).astype(labels.dtype)
