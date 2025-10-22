@@ -5,6 +5,8 @@
 #include <cstdlib>
 #include <cmath>
 #include <functional>
+
+#include "smallsort.hpp"
 #include "threadpool.h"
 
 namespace fastmorph {
@@ -203,8 +205,10 @@ void multilabel_dilate(
 						continue;
 					} 
 
-					std::sort(middle.begin(), middle.end());
-					std::sort(right.begin(), right.end());
+					fastmorph::sort(middle);
+					fastmorph::sort(right);
+					// std::sort(middle.begin(), middle.end());
+					// std::sort(right.begin(), right.end());
 
 					if ((right.size() + middle.size() >= 14)
 						&& right[0] == right[right.size() - 1]
@@ -387,8 +391,10 @@ void multilabel_dilate(
 					continue;
 				} 
 
-				std::sort(middle.begin(), middle.end());
-				std::sort(right.begin(), right.end());
+				fastmorph::sort(middle);
+				fastmorph::sort(right);
+				// std::sort(middle.begin(), middle.end());
+				// std::sort(right.begin(), right.end());
 
 				if ((right.size() + middle.size() >= 5)
 					&& right[0] == right[right.size() - 1]
