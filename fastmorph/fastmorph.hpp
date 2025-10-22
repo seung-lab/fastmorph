@@ -207,8 +207,6 @@ void multilabel_dilate(
 
 					fastmorph::sort(middle);
 					fastmorph::sort(right);
-					// std::sort(middle.begin(), middle.end());
-					// std::sort(right.begin(), right.end());
 
 					if ((right.size() + middle.size() >= 14)
 						&& right[0] == right[right.size() - 1]
@@ -234,7 +232,6 @@ void multilabel_dilate(
 					neighbors.insert(neighbors.end(), right.begin(), right.end());
 
 					fastmorph::sort(neighbors);
-					// std::sort(neighbors.begin(), neighbors.end());
 
 					int size = neighbors.size();
 
@@ -394,8 +391,6 @@ void multilabel_dilate(
 
 				fastmorph::sort(middle);
 				fastmorph::sort(right);
-				// std::sort(middle.begin(), middle.end());
-				// std::sort(right.begin(), right.end());
 
 				if ((right.size() + middle.size() >= 5)
 					&& right[0] == right[right.size() - 1]
@@ -421,7 +416,6 @@ void multilabel_dilate(
 				neighbors.insert(neighbors.end(), right.begin(), right.end());
 
 				fastmorph::sort(neighbors);
-				// std::sort(neighbors.begin(), neighbors.end());
 
 				int size = neighbors.size();
 
