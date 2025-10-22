@@ -795,7 +795,6 @@ void sort(std::vector<LABEL>& labels) {
 	case 9:
 		sorting_network_9(labels);
 		break;
-	// ensure this compiles to a jump table
 	case 10:
 		sorting_network_10(labels);
 		break;
@@ -805,6 +804,7 @@ void sort(std::vector<LABEL>& labels) {
 	case 12:
 		sorting_network_12(labels);
 		break;
+	// ensure this compiles to a jump table
 	case 13:
 	case 14:
 	case 15:
@@ -815,6 +815,7 @@ void sort(std::vector<LABEL>& labels) {
 	case 18:
 		sorting_network_18(labels);
 		break;
+	// ensure this compiles to a jump table
 	case 19:
 	case 20:
 	case 21:
