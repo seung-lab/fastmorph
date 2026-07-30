@@ -709,12 +709,15 @@ def fill_holes_v2(
       cc_labels[slc], enclosed_2d_slice = _fill_holes_2d(cc_labels[slc], orig_map)
       enclosed_2d.update(enclosed_2d_slice)
 
-  surface_areas = cc3d.contacts(
-    cc_labels,
-    connectivity=6,
-    surface_area=True,
-    anisotropy=tuple(anisotropy),
-  )
+  if HAS_CRACKLE:
+    surface_areas = orig_cc_labels.contacts(tuple(anisotropy))
+  else:  
+    surface_areas = cc3d.contacts(
+      cc_labels,
+      connectivity=6,
+      surface_area=True,
+      anisotropy=tuple(anisotropy),
+    )
 
   connections = _pairs_to_connection_list(surface_areas.keys())
 
