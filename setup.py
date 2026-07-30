@@ -32,6 +32,7 @@ setuptools.setup(
   ],
   extras_require={
     "spherical": [ "scipy" ],
+    "crackle": ["crackle-codec>=0.41.0"],
   },
   python_requires=">=3.9.0",
   author="William Silversmith",
