@@ -505,7 +505,7 @@ void multilabel_erode(
 			(xi >= 0 && xi < sx)
 		 && ((!erode_border && (zi >= sz - 1)) || (zi < sz - 1 && labels[loc+sxy] == labels[loc]))
 		 && ((!erode_border && (yi == 0 || zi >= sz - 1)) || (yi > 0 && zi < sz - 1 && labels[loc-sx+sxy] == labels[loc]))
-		 && ((!erode_border && (yi >= sy - 1 || sz >= sz - 1)) || (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] == labels[loc]))
+		 && ((!erode_border && (yi >= sy - 1 || zi >= sz - 1)) || (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] == labels[loc]))
 		));
 	};
 
