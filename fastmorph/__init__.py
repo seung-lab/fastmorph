@@ -610,6 +610,7 @@ def fill_holes_v2(
   anisotropy:AnisotropyType = (1.0, 1.0, 1.0),
   parallel:int = 0,
   return_crackle:bool = False,
+  memory_target:int = int(4e9),
 ) -> Union[
   tuple[npt.NDArray[np.number], npt.NDArray[np.number]], 
   tuple["CrackleArray", "CrackleArray"]
@@ -672,7 +673,9 @@ def fill_holes_v2(
   if HAS_CRACKLE and isinstance(labels, crackle.CrackleArray):
     cc_labels, orig_map = (labels+1).connected_components(
       connectivity=6, 
-      return_mapping=True
+      return_mapping=True,
+      memory_target=memory_target,
+      progress=True,
     )
     N = len(orig_map)
   elif labels.flags.writeable:
@@ -728,18 +731,27 @@ def fill_holes_v2(
 
   connections = _pairs_to_connection_list(surface_areas.keys())
 
-  edge_labels = set()
-  bg_edge_labels = set()
+  if HAS_CRACKLE and isinstance(cc_labels, crackle.CrackleArray):
+    edge_labels = cc_labels.edge_labels()
+    bg_edge_labels = set()
+    for segid in edge_labels:
+      if orig_map[segid] == 0:
+        bg_edge_labels.add(segid)
 
-  for slc in slices:
-    slice_labels = cc_labels[slc]
-    uniq = set(fastremap.unique(slice_labels))
+    edge_labels.difference_update(bg_edge_labels)
+  else:
+    edge_labels = set()
+    bg_edge_labels = set()
 
-    for u in uniq:
-      if orig_map[u] == 0:
-        bg_edge_labels.add(u)
+    for slc in slices:
+      slice_labels = cc_labels[slc]
+      uniq = set(fastremap.unique(slice_labels))
 
-    edge_labels.update(uniq)
+      for u in uniq:
+        if orig_map[u] == 0:
+          bg_edge_labels.add(u)
+
+      edge_labels.update(uniq)
 
   for bgl in bg_edge_labels:
     for lbl in connections[bgl]:
