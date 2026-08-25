@@ -752,14 +752,13 @@ def fill_holes_v2(
           bg_edge_labels.add(u)
 
       edge_labels.update(uniq)
+      del uniq
+      del slice_labels
 
   for bgl in bg_edge_labels:
     for lbl in connections[bgl]:
       if surface_areas[tuple(sorted([bgl, lbl]))] > 0:
         edge_labels.add(lbl)
-
-  del uniq
-  del slice_labels
 
   if HAS_CRACKLE:
     cc_labels = crackle.compressa(cc_labels, parallel=parallel)
