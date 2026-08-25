@@ -669,7 +669,13 @@ def fill_holes_v2(
     return _fill_binary_image(labels, fix_borders, return_crackle, parallel)
 
   # Ensure bg 0 gets treated as a connected component
-  if labels.flags.writeable:
+  if HAS_CRACKLE and isinstance(labels, crackle.CrackleArray):
+    cc_labels, orig_map = (labels+1).connected_components(
+      connectivity=6, 
+      return_mapping=True
+    )
+    N = len(orig_map)
+  elif labels.flags.writeable:
     labels += 1
     cc_labels, N = cc3d.connected_components(
       labels, 
@@ -677,14 +683,15 @@ def fill_holes_v2(
       connectivity=6,
     )
     labels -= 1
+    orig_map = fastremap.component_map(cc_labels, labels)
   else:
     cc_labels, N = cc3d.connected_components(
       labels + 1, 
       return_N=True, 
       connectivity=6,
     )
+    orig_map = fastremap.component_map(cc_labels, labels)
 
-  orig_map = fastremap.component_map(cc_labels, labels)
   orig_map[0] = 0
 
   slices = [
