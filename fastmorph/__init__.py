@@ -671,13 +671,15 @@ def fill_holes_v2(
 
   # Ensure bg 0 gets treated as a connected component
   if HAS_CRACKLE and isinstance(labels, crackle.CrackleArray):
-    cc_labels, orig_map = (labels+1).connected_components(
+    labels += 1
+    cc_labels, orig_map = labels.connected_components(
       connectivity=6, 
       return_mapping=True,
       memory_target=memory_target,
       progress=True,
     )
     N = len(orig_map)
+    labels -= 1
   elif labels.flags.writeable:
     labels += 1
     cc_labels, N = cc3d.connected_components(
