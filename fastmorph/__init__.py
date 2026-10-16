@@ -679,6 +679,7 @@ def fill_holes_v2(
       progress=True,
     )
     N = len(orig_map)
+    orig_map = { k: v - 1 for k,v in orig_map.items() }
     labels -= 1
   elif labels.flags.writeable:
     labels += 1
