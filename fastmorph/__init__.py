@@ -1,7 +1,9 @@
 from typing import Union, Iterator
 
 from collections import defaultdict
+from collections.abc import Callable
 from enum import Enum
+from functools import partial
 from typing import Optional, Sequence
 
 import numpy as np
@@ -29,12 +31,12 @@ class Mode(Enum):
   grey = 2
 
 def dilate(
-  labels:np.ndarray,
+  labels:Union[np.ndarray,"CrackleArray"],
   background_only:bool = True,
   parallel:int = 0,
   mode:Mode = Mode.multilabel,
   iterations:int = 1,
-) -> np.ndarray:
+) -> Union[np.ndarray,"CrackleArray"]:
   """
   Dilate forground labels using a 3x3x3 stencil with
   all elements "on".
@@ -59,11 +61,23 @@ def dilate(
   if iterations < 0:
     raise ValueError(f"iterations ({iterations}) must be a positive integer.")
   elif iterations == 0:
-    return np.copy(labels, order="F")
+    return labels.copy(order="F")
 
   if parallel == 0:
     parallel = mp.cpu_count()
   parallel = min(parallel, mp.cpu_count())
+
+  if HAS_CRACKLE and isinstance(labels, crackle.CrackleArray):
+    return _crackle_operation(
+      partial(dilate, 
+        background_only=background_only, 
+        parallel=parallel, 
+        mode=mode, 
+      ),
+      labels=labels,
+      iterations=iterations,
+      parallel=parallel,
+    )
 
   labels = np.asfortranarray(labels)
   while labels.ndim < 2:
@@ -79,13 +93,33 @@ def dilate(
 
   return output.view(labels.dtype)
 
+def dilate_crackle(
+  labels:"CrackleArray",
+  background_only:bool = True,
+  parallel:int = 0,
+  mode:Mode = Mode.multilabel,
+  iterations:int = 1,
+  chunk_size:int = 10,
+) -> "CrackleArray":
+  return _crackle_operation(
+    partial(dilate, 
+      background_only=background_only, 
+      parallel=parallel, 
+      mode=mode,
+    ),
+    labels=labels,
+    iterations=iterations,
+    parallel=parallel,
+    chunk_size=chunk_size,
+  )
+
 def erode(
-  labels:np.ndarray, 
+  labels:Union[np.ndarray,"CrackleArray"], 
   parallel:int = 0,
   mode:Mode = Mode.multilabel,
   iterations:int = 1,
   erode_border:bool = True,
-) -> np.ndarray:
+) -> Union[np.ndarray,"CrackleArray"]:
   """
   Erodes forground labels using a 3x3x3 stencil with
   all elements "on".
@@ -108,12 +142,15 @@ def erode(
   if iterations < 0:
     raise ValueError(f"iterations ({iterations}) must be a positive integer.")
   elif iterations == 0:
-    return np.copy(labels, order="F")
+    return labels.copy(order="F")
 
   if parallel == 0:
     parallel = mp.cpu_count()
 
   parallel = min(parallel, mp.cpu_count())
+
+  if HAS_CRACKLE and isinstance(labels, crackle.CrackleArray):
+    return erode_crackle(labels, parallel, mode, iterations, erode_border)
 
   labels = np.asfortranarray(labels)
   while labels.ndim < 2:
@@ -128,6 +165,91 @@ def erode(
       output = fastmorphops.grey_erode(output, parallel)
 
   return output.view(labels.dtype)
+
+def erode_crackle(
+  labels:"crackle.CrackleArray", 
+  parallel:int = 0,
+  mode:Mode = Mode.multilabel,
+  iterations:int = 1,
+  erode_border:bool = True,
+  chunk_size:int = 10,
+) -> "crackle.CrackleArray":
+  return _crackle_operation(
+    partial(erode, 
+      erode_border=erode_border, 
+      parallel=parallel, 
+      mode=mode, 
+    ),
+    labels=labels,
+    iterations=iterations,
+    parallel=parallel,
+    chunk_size=chunk_size,
+  )
+
+def _crackle_operation(
+  fn:Callable,
+  labels:"crackle.CrackleArray",
+  iterations:int = 1,
+  progress:bool = False,
+  parallel:int = 0,
+  chunk_size:int = 10,
+) -> "crackle.CrackleArray":
+  import time
+  import crackle
+  from crackle import CrackleArray
+
+  assert iterations > 0 and int(iterations) == iterations
+
+  if isinstance(labels, bytes):
+      labels = CrackleArray(labels)
+  elif not isinstance(labels, CrackleArray):
+      raise ValueError("This function only accepts type CrackleArrays.")
+
+  if labels.size <= 1:
+    return labels
+
+  labels = labels.asfortranarray()
+  header = labels.header()
+
+  padding = 1
+  cz = chunk_size + 2 * padding
+  cz = max(cz, 1)
+  cz = min(cz, header.sz)
+  cz = int(cz)
+
+  num_chunks = max(int(np.ceil(header.sz / cz)), 0)
+
+  compressed_chunks = [ None ] * num_chunks
+
+  iterated_labels = labels
+  iterated_labels.parallel = parallel
+  
+  for n_iter in trange(iterations, desc="Iteration", disable=(not progress or iterations == 1)):
+    for i in trange(num_chunks, desc="z-chunk", disable=(not progress)):
+      z = (i * cz)
+      if z == 0:
+        chunk_start = 0
+      else:
+        chunk_start = z - padding
+
+      chunk_end = z + cz + padding
+      chunk_end = min(header.sz, chunk_end)
+
+      arr = iterated_labels[:,:,chunk_start:chunk_end]
+      arr = fn(arr)
+      
+      if chunk_start != 0:
+          arr = arr[:,:,padding:]
+      if chunk_end != header.sz:
+          arr = arr[:,:,:-padding]
+
+      compressed_chunks[i] = crackle.compressa(arr, parallel=parallel)
+      del arr
+
+    iterated_labels = CrackleArray(crackle.zstack(compressed_chunks))
+    iterated_labels.parallel = parallel
+
+  return iterated_labels
 
 def opening(
   labels:np.ndarray, 
@@ -604,7 +726,7 @@ def _fill_binary_image(
   return binary_image, np.zeros(binary_image.shape, dtype=bool, order=order)
 
 def fill_holes_v2(
-  labels:npt.NDArray[np.number],
+  labels:Union[npt.NDArray[np.number],"CrackleArray"],
   fix_borders:bool = False,
   merge_threshold:float = 1.0,
   anisotropy:AnisotropyType = (1.0, 1.0, 1.0),
