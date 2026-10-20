@@ -634,6 +634,7 @@ def _true_label(
   surface_areas:dict[tuple[int,int],float],
   merge_threshold:float,
   visited:np.ndarray,
+  merge_isolated_groups:bool,
 ) -> tuple[int, set[int]]:
   assert 0.0 <= merge_threshold <= 1.0
 
@@ -662,6 +663,8 @@ def _true_label(
     for next_label in connections[label]:
       stack.append(next_label)
 
+  biggest_found_edge = hole 
+
   if merge_threshold > 0.0 and len(found_edges) > 1:
     areas = defaultdict(int)
     total_area = 0
@@ -687,13 +690,25 @@ def _true_label(
         areas[edge] += area
         total_area += area
 
+    if merge_isolated_groups: # gated for efficiency
+      max_area = -1
+      max_edge = hole
+      for edge, area in areas.items():
+        if area > max_area and edge in found_edges:
+          max_edge = edge
+          max_area = area
+
+      biggest_found_edge = max_edge
+
     for edge in list(found_edges):
       if areas[edge] / total_area < merge_threshold:
         found_edges.discard(edge)
 
   if len(found_edges) == 1:
     return next(iter(found_edges)), hole_group
-  
+  elif len(found_edges) == 0 and merge_isolated_groups:
+    return biggest_found_edge, hole_group
+
   return hole, hole_group
 
 def _fill_binary_image(
@@ -733,6 +748,7 @@ def fill_holes_v2(
   parallel:int = 0,
   return_crackle:bool = False,
   memory_target:int = int(4e9),
+  merge_isolated_groups:bool = False,
 ) -> Union[
   tuple[npt.NDArray[np.number], npt.NDArray[np.number]], 
   tuple["CrackleArray", "CrackleArray"]
@@ -780,6 +796,13 @@ def fill_holes_v2(
   memory_target: try to restrict memory usage to this number of bytes
     this mainly controls how large the chunks connected components processes.
     Bigger chunks are more efficient.
+  merge_isolated_groups: there may be groups of labels that nestle between
+    two larger labels but aren't directly contacting edge labels. By default,
+    these should be considered independent groups within a multi-label image.
+    However, in some cases, like in the case of the connectomics PyChunkGraph,
+    perhaps we are looking at a single neuron's decomposition into the L2 graph.
+    In this case, we know for certain that there should be no independent cavities
+    within the shape and these should be merged.
 
   Return value: (filled_labels, hole_labels)
   """
@@ -899,6 +922,7 @@ def fill_holes_v2(
       hole, edge_labels, 
       connections, surface_areas, 
       merge_threshold, visited,
+      merge_isolated_groups,
     )
     if hole == parent_label:
       holes.discard(hole)
