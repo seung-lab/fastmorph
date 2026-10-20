@@ -858,27 +858,20 @@ def fill_holes_v2(
 
   if HAS_CRACKLE and isinstance(cc_labels, crackle.CrackleArray):
     edge_labels = cc_labels.edge_labels()
-    bg_edge_labels = set()
-    for segid in edge_labels:
-      if orig_map[segid] == 0:
-        bg_edge_labels.add(segid)
-
-    edge_labels.difference_update(bg_edge_labels)
   else:
     edge_labels = set()
-    bg_edge_labels = set()
 
     for slc in slices:
       slice_labels = cc_labels[slc]
       uniq = set(fastremap.unique(slice_labels))
-
-      for u in uniq:
-        if orig_map[u] == 0:
-          bg_edge_labels.add(u)
-
       edge_labels.update(uniq)
       del uniq
       del slice_labels
+
+  bg_edge_labels = set()
+  for segid in edge_labels:
+    if orig_map[segid] == 0:
+      bg_edge_labels.add(segid)
 
   for bgl in bg_edge_labels:
     for lbl in connections[bgl]:
