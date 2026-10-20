@@ -763,9 +763,6 @@ def fill_holes_v2(
 
   NOTE: if crackle-codec is installed, this function will have reduced memory usage.
 
-  return_fill_count: return the total number of pixels filled in
-    for boolean array: integer
-    for integer array: { label: count }
   fix_borders: along each edge of the image, try filling each label as a binary
     image and consider labels removed to be holes and fill them. holes will be
     returned without this filling artifact
@@ -780,6 +777,9 @@ def fill_holes_v2(
   parallel: pass this value to any internal algorithms that support parallel operation
   return_crackle: you can reduce memory usage by returning the outputs as compressed
     CrackleArrays.
+  memory_target: try to restrict memory usage to this number of bytes
+    this mainly controls how large the chunks connected components processes.
+    Bigger chunks are more efficient.
 
   Return value: (filled_labels, hole_labels)
   """
