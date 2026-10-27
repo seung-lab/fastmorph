@@ -279,6 +279,18 @@ def opening(
     background_only, parallel, mode, iterations=1
   )
 
+def erode_autapses(
+  labels:npt.NDArray[np.integer],
+  voxel_graph:npt.NDArray[np.uint32],
+) -> np.ndarray:
+  """
+  Erode labels by 1 voxel where there are self-contacts
+  as described by the voxel_graph. The voxel graph is
+  a bitmask defined in cc3d.
+  """
+  fastmorphops.erode_autapses(labels, voxel_graph)
+  return labels
+
 def closing(
   labels:np.ndarray, 
   background_only:bool = True,

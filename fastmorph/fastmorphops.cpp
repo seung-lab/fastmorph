@@ -4,6 +4,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 
+#include <concepts>
 #include <cstdlib>
 #include <cmath>
 
@@ -334,7 +335,107 @@ uint64_t count_differences(
     return count;
 }
 
+// vcg defintion located in: 
+// https://github.com/seung-lab/connected-components-3d/blob/master/cc3d/cc3d_graphs.hpp#L76-L95
+template <std::integral LABEL>
+void erode_autapses(
+	py::array_t<LABEL, py::array::f_style>& py_labels,
+	const py::array_t<uint32_t, py::array::f_style>& py_vcg
+) {
+	if (py_labels.ndim() != 3) {
+		throw std::invalid_argument("labels must be a 3d array.");
+	}
 
+	LABEL* labels = const_cast<LABEL*>(py_labels.data());
+	const uint32_t* vcg = const_cast<uint32_t*>(py_vcg.data());
+
+	const int64_t sx = py_labels.shape(0);
+	const int64_t sy = py_labels.shape(1);
+	const int64_t sz = py_labels.shape(2);
+
+	// This mapping thanks to DeepSeek's assistance with interpolating
+	// the cc3d VCG bit position map
+	static constexpr uint32_t vcg_mask[27] = {
+		// zi = -1
+		1u << 25, // (-x,-y,-z) bit 26
+		1u << 17, // ( 0,-y,-z) bit 18
+		1u << 24, // (+x,-y,-z) bit 25
+		1u << 15, // (-x, 0,-z) bit 16
+		1u << 5,  // ( 0, 0,-z) bit 6
+		1u << 14, // (+x, 0,-z) bit 15
+		1u << 23, // (-x,+y,-z) bit 24
+		1u << 16, // ( 0,+y,-z) bit 17
+		1u << 22, // (+x,+y,-z) bit 23
+
+		// zi = 0
+		1u << 9,  // (-x,-y, 0) bit 10
+		1u << 3,  // ( 0,-y, 0) bit 4
+		1u << 8,  // (+x,-y, 0) bit 9
+		1u << 1,  // (-x, 0, 0) bit 2
+		0u,       // ( 0, 0, 0) unused
+		1u << 0,  // (+x, 0, 0) bit 1
+		1u << 7,  // (-x,+y, 0) bit 8
+		1u << 2,  // ( 0,+y, 0) bit 3
+		1u << 6,  // (+x,+y, 0) bit 7
+
+		// zi = +1
+		1u << 21, // (-x,-y,+z) bit 22
+		1u << 13, // ( 0,-y,+z) bit 14
+		1u << 20, // (+x,-y,+z) bit 21
+		1u << 11, // (-x, 0,+z) bit 12
+		1u << 4,  // ( 0, 0,+z) bit 5
+		1u << 10, // (+x, 0,+z) bit 11
+		1u << 19, // (-x,+y,+z) bit 20
+		1u << 12, // ( 0,+y,+z) bit 13
+		1u << 18, // (+x,+y,+z) bit 19
+	};
+
+	for (int64_t z = 0; z < sz; z++) {
+		for (int64_t y = 0; y < sy; y++) {
+			for (int64_t x = 0; x < sx; x++) {
+				const int64_t loc = x + sx * (y + sy * z);
+				const LABEL cur = labels[loc];
+
+				int64_t zi = z == 0 ? 0 : -1;
+				int64_t yi = y == 0 ? 0 : -1;
+				int64_t xi = x == 0 ? 0 : -1;
+
+				const int64_t zf = z == sz - 1 ? 0 : 1;
+				const int64_t yf = y == sy - 1 ? 0 : 1;
+				const int64_t xf = x == sx - 1 ? 0 : 1;
+
+				const uint32_t vc = vcg[loc];
+
+				for (; zi <= zf; zi++) {
+					for (; yi <= yf; yi++) {
+						for (; xi <= xf; xi++) {
+							if (xi == 0 && yi == 0 && zi == 0) {
+								continue;
+							}
+
+							const int64_t loc_i = loc + (xi + sx * (yi + sy * zi));
+							const LABEL neighbor = labels[loc_i];
+
+							if (cur != neighbor) {
+								continue;
+							}
+
+							const int64_t mask_pos = (xi+1) + 3 * (yi+1) + 9 * (zi+1);
+
+							if ((vc & vcg_mask[mask_pos]) == 0) {
+								labels[loc] = 0;
+								goto NEXT_LOOP;
+							}
+
+						}
+					}
+				}
+
+				NEXT_LOOP: ;
+			}
+		}
+	}
+}
 
 PYBIND11_MODULE(fastmorphops, m) {
 	m.doc() = "Accelerated fastmorph functions."; 
@@ -356,4 +457,13 @@ PYBIND11_MODULE(fastmorphops, m) {
 	m.def("draw_with_mask_f_order", &draw_with_mask_f_order<int64_t>);
 
 	m.def("count_differences", &count_differences);
+
+	m.def("erode_autapses", &erode_autapses<uint8_t>, "Erode self-touches in a volume with a voxel-connectivity graph.");
+	m.def("erode_autapses", &erode_autapses<uint16_t>, "Erode self-touches in a volume with a voxel-connectivity graph.");
+	m.def("erode_autapses", &erode_autapses<uint32_t>, "Erode self-touches in a volume with a voxel-connectivity graph.");
+	m.def("erode_autapses", &erode_autapses<uint64_t>, "Erode self-touches in a volume with a voxel-connectivity graph.");
+	m.def("erode_autapses", &erode_autapses<int8_t>, "Erode self-touches in a volume with a voxel-connectivity graph.");
+	m.def("erode_autapses", &erode_autapses<int16_t>, "Erode self-touches in a volume with a voxel-connectivity graph.");
+	m.def("erode_autapses", &erode_autapses<int32_t>, "Erode self-touches in a volume with a voxel-connectivity graph.");
+	m.def("erode_autapses", &erode_autapses<int64_t>, "Erode self-touches in a volume with a voxel-connectivity graph.");
 }
