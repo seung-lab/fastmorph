@@ -403,6 +403,10 @@ void erode_autapses(
 				const int64_t loc = x + sx * (y + sy * z);
 				const LABEL cur = labels[loc];
 
+				if (cur == 0) {
+					continue;
+				}
+
 				int64_t zi = z == 0 ? 0 : -1;
 				int64_t yi = y == 0 ? 0 : -1;
 				int64_t xi = x == 0 ? 0 : -1;
