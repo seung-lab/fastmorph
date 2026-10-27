@@ -345,6 +345,13 @@ void erode_autapses(
 	if (py_labels.ndim() != 3) {
 		throw std::invalid_argument("labels must be a 3d array.");
 	}
+	if (py_vcg.ndim() != 3) {
+		throw std::invalid_argument("vcg must be a 3d array.");
+	}
+	if (py_labels.size() != py_vcg.size()) {
+		throw std::invalid_argument("labels must match vcg in size.");
+	}
+
 
 	LABEL* labels = const_cast<LABEL*>(py_labels.data());
 	const uint32_t* vcg = const_cast<uint32_t*>(py_vcg.data());
