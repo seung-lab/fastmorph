@@ -734,7 +734,7 @@ def _fill_binary_image(
 
   if return_crackle:
     filled = crackle.compressa(binary_image, parallel=parallel)
-    holes = crackle.CrackleArray(crackle.zeros(binary_image.shape, dtype=bool, order=order))
+    holes = crackle.zeros(binary_image.shape, dtype=bool, order=order)
     holes.parallel = parallel
     return filled, holes
 
